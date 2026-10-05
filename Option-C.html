@@ -1,0 +1,407 @@
+<!--
+OPTION C
+We expect the tester to: xem nháp AI, tick từng mục; mở "`mảnh gốc" của mục Mức chắc thấp trước khi xác nhận; bỏ 1–2 mục.
+Watch for: tick mà không đọc; dừng lâu ở mục Slide 8; có mở slide gốc không; có gộp nhầm mảnh 2 và 3 (training vs. prompt) không.
+Do not explain: không narrate AI biết gì; không chỉ chỗ bỏ mục; không nói vì sao mục Slide 8 bị khóa.
+-->
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VLearn · Option C — AI Notes ôn thi</title>
+<style>
+:root{
+  --cream:#f8f5ed; --olive:#2f6f6a; --olive-soft:#eef4f3; --olive-line:#cfe0dc; --ink:#33392f; --muted:#8b8578;
+  --line:#e4ddcf; --card:#ffffff; --warn-bg:#fbf3e6; --warn-line:#ecd9b5; --warn:#7a5a1e; --danger:#c4695c;
+  --accent:#2f6f6a; --accent-shadow:#244f4b; --src:#9a6b2f; --srcbg:#fdf8ec;
+}
+*{box-sizing:border-box} html,body{height:100%;margin:0;font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--cream)} button,input,textarea{font:inherit}
+body{width:100%;overflow-x:hidden}
+
+/* ---------- topbar ---------- */
+.topbar{height:62px;border-bottom:1.5px solid var(--line);display:flex;align-items:center;gap:12px;background:#fffef9;width:100%;position:sticky;top:0;z-index:10}
+.top-left{display:flex;align-items:center;gap:12px;padding:0 16px 0 24px;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;flex:1}
+.mascot{width:38px;height:38px;border-radius:50%;background:var(--olive);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0}
+.back{font-size:24px;font-weight:300;color:var(--muted)}
+.top-center{display:flex;justify-content:center;align-items:center;gap:14px}
+.progress-pill{background:var(--olive-soft);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:700;color:var(--olive)}
+.top-right{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding-right:16px}
+.ask-btn{border:1.5px solid var(--olive-line);background:var(--olive-soft);color:var(--olive);border-radius:12px;padding:9px 16px;font-weight:700;cursor:pointer}
+.avatar-user{width:38px;height:38px;border-radius:50%;background:var(--srcbg);color:var(--warn);display:grid;place-items:center;font-weight:800}
+
+/* ---------- layout ---------- */
+.layout{height:calc(100vh - 62px);display:flex;width:100%}
+.left{width:230px;min-width:190px;background:#f4efe3;border-right:1.5px solid var(--line);overflow:auto;padding-bottom:20px;flex-shrink:0}
+.left-head{padding:16px 16px 6px;font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.section-title{padding:8px 16px;font-size:13px;font-weight:700;color:#6f6a5e;display:flex;justify-content:space-between}
+.lesson-row{margin:0 10px 4px;padding:9px 12px;border-radius:12px;display:flex;align-items:center;gap:10px;font-size:13px;background:#fff;border:1.5px solid var(--line)}
+.lesson-row.selected{background:var(--olive-soft);border-color:var(--olive-line);color:var(--olive);font-weight:700}
+.done-tag{margin-left:auto;font-size:12px;color:#4f7f6f}
+.track{margin:12px 12px 0;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:6px}
+.track-title{padding:10px 12px;font-size:14px;font-weight:800;color:var(--olive)}
+.activity{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;font-size:13px;color:#5c5648}
+.activity .n{width:22px;height:22px;border-radius:50%;background:var(--cream);border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px}
+
+/* ---------- center: slide canvas (thanh phải được ưu tiên cho AI Notes) ---------- */
+.center{overflow:auto;padding:20px 22px 60px;flex:1;min-width:0}
+.slide-wrap{max-width:600px;margin:0 auto}
+.lesson-hd{font-size:13px;color:var(--muted);margin-bottom:6px}
+.slide{border:1.5px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 6px 20px rgba(90,80,50,.07);padding:20px 22px;margin-bottom:14px}
+.slide .tag-src{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--src);text-transform:uppercase}
+.slide h3{margin:5px 0 8px;font-size:16px}
+.slide ul{padding-left:18px;font-size:13px;line-height:1.65}
+.hl{background:linear-gradient(transparent 55%, #f3e3b8 55%);border-radius:2px;padding:0 2px}
+.blurry{filter:blur(2.4px);user-select:none}
+.mark{margin-top:12px;border:1.5px dashed var(--src);background:var(--srcbg);color:var(--warn);border-radius:12px;padding:9px 12px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
+.tool{height:38px;min-width:38px;border:1.5px solid var(--line);background:#fff;border-radius:12px;display:grid;place-items:center;color:#6f6a5e;padding:0 10px;font-size:13px}
+.tool.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.thumbs{display:flex;gap:10px;padding:8px;border:1.5px solid var(--line);border-radius:14px;background:#fffef9}
+.thumb{width:92px;height:58px;border-radius:10px;background:linear-gradient(140deg,var(--olive-soft),var(--srcbg));border:1.5px solid var(--line);position:relative}
+.thumb span{position:absolute;left:6px;bottom:4px;background:rgba(50,45,25,.45);color:#fff;border-radius:6px;padding:1px 7px;font-size:10px}
+.feedback{margin-top:18px;font-size:13px;color:var(--muted)}
+
+/* ---------- right: AI panel (to hơn — vùng chính để quan sát reviewer) ---------- */
+.right{border-left:1.5px solid var(--line);background:#f2eee4;padding:12px;width:540px;flex-shrink:0}
+.ai-panel{height:100%;background:#fff;border:1.5px solid var(--line);border-radius:20px;display:flex;flex-direction:column;overflow:hidden}
+.ai-header{padding:13px 16px;border-bottom:1.5px solid var(--line);display:flex;align-items:center;gap:10px}
+.ai-avatar{width:40px;height:40px;border-radius:50%;background:var(--olive);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800}
+.ai-header b{font-size:17px;display:block}
+.ai-header small{font-size:12px;color:var(--muted);font-weight:400}
+.ai-body{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.screen{display:none}.screen.active{display:flex;flex-direction:column;gap:12px}
+.welcome{text-align:center;padding:8px 4px}
+.welcome .big{font-size:24px;font-weight:800;color:var(--olive)}
+.welcome h3{font-size:18px;margin:6px 0 4px}
+.welcome p{font-size:13px;color:var(--muted)}
+.ai-note{background:var(--olive-soft);border:1.5px solid var(--olive-line);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.6}
+.ai-note b{color:var(--olive)}
+.frag-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.frag{border:1.5px solid var(--line);background:#fffef9;border-radius:12px;padding:10px 12px;font-size:12px;color:var(--muted);min-height:60px}
+.frag b{display:block;font-size:14px;color:var(--ink);margin-bottom:3px}
+.btn{border-radius:14px;padding:13px 14px;font-weight:800;cursor:pointer;border:0;font-size:15px;transition:transform .06s}
+.btn:active{transform:scale(.97)}
+.primary-btn{background:var(--accent);color:#fff;box-shadow:0 3px 0 var(--accent-shadow)}
+.primary-btn:disabled{background:#c9dedb;color:#fff;box-shadow:none;cursor:not-allowed}
+.secondary-btn{background:#fff;border:1.5px solid var(--line);color:#5c5648}
+.danger-btn{background:#fff;border:1.5px solid #efd2c9;color:var(--danger)}
+.sub{font-size:12px;text-align:center;color:var(--muted)}
+.progress{height:8px;background:#ece5d4;border-radius:999px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--olive);width:0;transition:.25s}
+.counter{font-size:12px;color:var(--muted)}
+.draft-list{display:flex;flex-direction:column;gap:10px}
+.draft{border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;background:#fffef9}
+.draft.approved{border-color:#bcd9cf;background:#f2faf6}
+.draft.warning{border-color:var(--warn-line);background:var(--warn-bg)}
+.draft-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.draft-title{font-size:15.5px;font-weight:700;line-height:1.4}
+.confidence{font-size:11px;font-weight:800;border-radius:8px;padding:3px 9px;background:var(--olive-soft);color:var(--olive);white-space:nowrap}
+.confidence.low{background:#f3dcae;color:#7a5a1e}
+.draft-text{font-size:14.5px;line-height:1.6;margin-top:5px}
+.draft .source{font-size:12px;color:var(--src);margin-top:7px}
+.warn{font-size:13px;color:var(--warn);margin-top:7px;font-weight:600}
+.source-box{display:none;font-size:13px;background:#fff;border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;color:#5c5648;line-height:1.55}
+.source-box.open{display:block}
+.actions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.tiny{font-size:12px;font-weight:700;padding:7px 12px;border-radius:9px;border:1.5px solid var(--line);background:#fff;cursor:pointer}
+.tiny.ok{background:var(--olive);color:#fff;border-color:var(--olive)}
+.tiny.ok:disabled{opacity:.45;cursor:not-allowed}
+.tiny.del{color:var(--danger);border-color:#efd2c9}
+.result{border:1.5px solid #bcd9cf;background:#f2faf6;border-radius:12px;padding:12px 13px;font-size:14px}
+.result b{display:block;font-size:14.5px}
+.result .source{font-size:12px;color:var(--src);margin-top:5px}
+.composer{padding:12px 14px;border-top:1.5px solid var(--line)}
+.inputbox{background:var(--cream);border:1.5px solid var(--line);border-radius:14px;padding:10px 14px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between}
+.disclaimer{font-size:10px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.5}
+/* floating log dock */
+.logdock{position:fixed;left:18px;bottom:18px;z-index:45;font-size:12px}
+.logdock .dk-btn{background:var(--ink);color:#fff;border:0;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:12px}
+.logdock .dk-list{display:none;width:340px;max-height:300px;overflow:auto;background:#fffef9;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 10px 34px rgba(50,40,20,.25)}
+.logdock.open .dk-list{display:block}
+.logdock .dk-item{padding:5px 0;border-bottom:1px dashed var(--line);line-height:1.45}
+.logdock .dk-item:last-child{border-bottom:0}
+.logdock .dk-t{color:var(--src);font-weight:800;margin-right:6px}
+.logdock .dk-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.logdock .dk-head b{font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;font-size:13px;padding:10px 18px;border-radius:999px;transition:.25s;z-index:40}
+.toast.show{transform:translateX(-50%)}
+.modal{position:fixed;inset:0;background:rgba(50,45,30,.35);display:none;place-items:center;z-index:30}
+.modal.open{display:grid}
+.modal-card{width:450px;background:#fffef9;border-radius:20px;padding:22px;border:1.5px solid var(--line)}
+.modal-card h3{font-size:16px}
+.modal-card p{font-size:13px;line-height:1.65;color:#5c5648;margin-top:8px}
+.modal-card .tiny{float:right;margin-top:14px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="top-left">
+    <div class="mascot" id="mascotEl" title="Nhấn để xem log hành vi (cho facilitator)">AI</div>
+    <span>Day 18 · AI Notes — notes để ôn thi</span>
+  </div>
+  <div class="top-center">
+    <span class="progress-pill">Bài đã học xong · thi cách 4 ngày</span>
+  </div>
+  <div class="top-right">
+    <button class="ask-btn">Đặt câu hỏi với AI</button>
+    <div class="avatar-user">K</div>
+    <span style="color:var(--muted)">⋮</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="left">
+    <div class="left-head">NỘI DUNG BÀI HỌC</div>
+    <div class="section-title">Bài giảng <span>⌄</span></div>
+    <div class="lesson-row selected">AI Foundation <span class="done-tag">✓ Đã xong</span></div>
+    <div class="track">
+      <div class="track-title">Lộ trình của bạn</div>
+      <div class="activity"><span class="n">1</span>Đề bài và cách làm</div>
+      <div class="activity"><span class="n">2</span>Day 17 — Tìm problem</div>
+      <div class="activity"><span class="n">3</span>Học bài &amp; lưu mảnh</div>
+      <div class="activity" style="opacity:.5"><span class="n">4</span>Kỳ thi (4 ngày nữa)</div>
+    </div>
+    <div class="section-title" style="margin-top:10px">Mảnh bạn đã lưu <span>6</span></div>
+    <div class="lesson-row" style="font-size:13px;color:var(--muted)">4 ảnh chụp màn hình</div>
+    <div class="lesson-row" style="font-size:13px;color:var(--muted)">2 note nhanh + câu hỏi</div>
+  </aside>
+
+  <!-- SLIDES — mảnh gốc, user xem lại bất cứ lúc nào -->
+  <main class="center">
+    <div class="slide-wrap">
+      <div class="lesson-hd">Bài "AI Foundation — LLM hoạt động thế nào" · 8 slide · đã học xong · slide gốc luôn mở để bạn đối chiếu</div>
+
+      <div id="slideBox"></div>
+
+      <div class="toolbar">
+        <div class="tool primary">Sửa</div><div class="tool">Sổ</div><div class="tool">100%</div>
+        <button class="tool" id="prevSlide" title="Slide trước">‹</button>
+        <div style="font-weight:700" id="slidePos">3 / 8</div>
+        <button class="tool" id="nextSlide" title="Slide sau">›</button>
+        <span style="color:var(--muted);font-size:12px">bạn đang xem lại slide gốc</span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="feedback">Nội dung này có hữu ích không?</div>
+    </div>
+  </main>
+
+  <!-- AI PANEL — nháp chờ duyệt -->
+  <aside class="right">
+    <div class="ai-panel">
+      <div class="ai-header">
+        <div class="ai-avatar">AI</div>
+        <div><b>AI Notes</b><small>mình gom nháp — bạn duyệt trước khi lưu nhé</small></div>
+        <span style="margin-left:auto;color:var(--muted)">⋯</span>
+      </div>
+      <div class="ai-body">
+
+        <section class="screen active" id="screen1">
+          <div class="welcome">
+            <div class="big">Học xong rồi!</div>
+            <h3>Gom notes ôn thi nha</h3>
+            <p>Bài "AI Foundation — LLM hoạt động thế nào" · 6 mảnh bạn đã lưu · thi cách 4 ngày</p>
+          </div>
+          <div class="ai-note">
+            <b>Mình sẽ soạn nháp từ bài giảng + các mảnh bạn lưu.</b><br>
+            Mình có thể nhầm chỗ "chưa hiểu" của bạn — nên từng mục đều phải <b>bạn tick xác nhận</b> thì mới được lưu nha.
+          </div>
+          <div class="frag-summary">
+            <div class="frag"><b>4 screenshots</b>Slide 5–8 · folder "Ảnh thi"</div>
+            <div class="frag"><b>Note nhanh</b>"chưa hiểu slide 5: training khác inference chỗ nào"</div>
+            <div class="frag"><b>Câu hỏi</b>"cần nail fine-tuning vs. prompt cho thi"</div>
+            <div class="frag"><b>Highlight</b>"LLMs predict the next token…"</div>
+            <div class="frag"><b>Câu hỏi</b>"token có phải là 1 từ không?"</div>
+            <div class="frag"><b>Không chắc</b>"slide 8: ảnh mờ, đọc không rõ"</div>
+          </div>
+          <button class="btn primary-btn" id="generateBtn">Soạn nháp từ 6 mảnh</button>
+          <button class="btn secondary-btn" id="viewFragmentsBtn">Xem lại 6 mảnh gốc trước</button>
+          <div class="sub">Không thích? Bạn có thể bỏ nháp bất cứ lúc nào và tự gom như thói quen cũ.</div>
+        </section>
+
+        <section class="screen" id="screen2">
+          <div class="ai-note"><b>Nháp xong rồi nè.</b><br>Mỗi mục đều ghi rõ mình dựa vào đâu. Mục <b>Mức chắc: Thấp</b> mình sẽ khóa tick tới khi bạn xem mảnh gốc — bạn mở mà chưa chắc thì cứ Bỏ mục nha.</div>
+          <div class="progress"><span id="progressFill"></span></div>
+          <div class="counter" id="reviewCounter">0/4 mục đã duyệt</div>
+          <div class="draft-list" id="draftList"></div>
+          <button class="btn primary-btn" id="continueBtn" disabled>Xem ghi chú chắc chắn lưu</button>
+          <button class="btn danger-btn" id="discardDraftBtn">Bỏ toàn bộ nháp — mình tự gom</button>
+        </section>
+
+        <section class="screen" id="screen3">
+          <div class="ai-note"><b>Đây là notes của bạn.</b><br>Chỉ gồm mục bạn đã tick. Muốn sửa thì bấm Quay lại duyệt — lưu xong vẫn đổi được.</div>
+          <div class="draft-list" id="resultList"></div>
+          <button class="btn primary-btn" id="saveBtn">Lưu vào Notes ôn thi</button>
+          <button class="btn secondary-btn" id="backReviewBtn">Quay lại duyệt</button>
+          <button class="btn danger-btn" id="resetBtn">Bỏ nháp · về 6 mảnh gốc</button>
+        </section>
+
+      </div>
+      <div class="composer">
+        <div class="inputbox">Hỏi mình bất cứ điều gì... <span>↑</span></div>
+        <div class="disclaimer">Trả lời của mình có thể sai — hãy đối chiếu với slide gốc. Đừng gửi thông tin cá nhân nhạy cảm.</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- LOG DOCK — floating góc trái dưới (facilitator xem live) -->
+<div class="logdock" id="logdock">
+  <div class="dk-list" id="dkList">
+    <div class="dk-head"><b>Log hành vi tester</b><span><button class="tiny" id="dkDl">Tải .txt</button></span></div>
+    <div id="dkItems"></div>
+  </div>
+  <button class="dk-btn" id="dkBtn">Log (<span id="dkCount">0</span>)</button>
+</div>
+<!-- Log viewer (facilitator) — nhấn chấm tròn "AI" góc trên trái để mở -->
+<div class="modal" id="logModal"><div class="modal-card" style="width:520px">
+  <h3>Log hành vi tester</h3>
+  <p style="white-space:pre-wrap;max-height:320px;overflow:auto" id="logBody"></p>
+  <button class="tiny" id="logClose">Đóng</button>
+  <button class="tiny" id="logDownload" style="float:right;margin-top:14px">Tải .txt</button>
+</div></div>
+<div class="modal" id="modal"><div class="modal-card">
+  <h3 id="modalTitle">Mảnh gốc</h3>
+  <p id="modalBody"></p>
+  <button class="tiny" id="modalClose">Đóng</button>
+</div></div>
+
+<script>
+const drafts = [
+ {id:1, title:"LLM đoán chữ kế tiếp dựa trên ngữ cảnh", confidence:"Trung bình",
+  text:"LLM sinh câu trả lời bằng cách đoán token kế tiếp theo ngữ cảnh; token có thể là 1 từ, một phần từ hoặc dấu câu — không luôn là 1 từ.",
+  source:"Dựa trên: highlight Slide 3 của bạn + thắc mắc 'token có phải là 1 từ không?'",
+  detail:"Mảnh gốc · Slide 3 [01:24]: 'LLMs predict the next token based on context'. Slide 4: token là mảnh chữ — 1 từ, một phần từ hoặc dấu câu. Thắc mắc của bạn trả lời được bằng Slide 4, slide gốc luôn mở."},
+ {id:2, title:"Training đổi trọng số — inference giữ nguyên", confidence:"Trung bình",
+  text:"Training là model học từ dữ liệu và thay đổi trọng số; inference là dùng model đã train để trả lời, trọng số không đổi. Mỗi lần chat là inference, không phải training.",
+  source:"Dựa trên: note 'chưa hiểu slide 5' của bạn + Slide 5 [04:12]",
+  detail:"Mảnh gốc · 'chưa hiểu slide 5: training khác inference chỗ nào'. Slide 5 nêu 4 dòng trực tiếp về training / fine-tuning / inference."},
+ {id:3, title:"Fine-tuning và prompt: hai đường khác nhau", confidence:"Trung bình",
+  text:"Fine-tuning là train thêm trên dữ liệu riêng (thay trọng số); prompt là toàn bộ chỉ dẫn gửi cho model (chỉ đổi đầu vào, không đổi model). Muốn đổi kết quả nhanh mà không cần train — bắt đầu từ prompt.",
+  source:"Dựa trên: câu hỏi tự gõ 'cần nail fine-tuning vs. prompt cho thi' + Slide 5 & Slide 6",
+  detail:"Mảnh gốc · 'cần nail phần fine-tuning vs. prompt cho thi'. Slide 5: fine-tuning thay đổi trọng số. Slide 6: 'đổi prompt chỉ đổi đầu vào, không đổi model'. Lưu ý: 2 ý này khác nhau, AI ghép từ 2 mảnh riêng biệt."},
+ {id:4, title:"Slide 8 — cách kiểm chứng hallucination", confidence:"Thấp",
+  text:"Có các cách giảm hallucination trong slide 8, gồm đưa nguồn vào prompt và kiểm lại số liệu — nhưng ảnh mờ nên mình không đủ chắc từng bước; bạn xem ảnh rồi quyết.",
+  source:"Dựa trên: screenshot IMG_0246.png + trạng thái 'ảnh mờ, đọc không rõ' (AI suy luận)",
+  detail:"Mảnh gốc · screenshot slide 8 mờ. Note đã lưu: 'slide 8: ảnh mờ, đọc không rõ'. Không đủ bằng chứng để xác nhận chi tiết — AI đánh dấu chắc thấp.",
+  requiresSource:true},
+];
+const state = {approved:new Set(), removed:new Set(), opened:new Set(),
+  texts:Object.fromEntries(drafts.map(d=>[d.id,d.text]))};
+
+/* ===== BEHAVIOR LOG (cho facilitator — không hiện cho tester ngoài nút góc trái) ===== */
+const LOG_KEY = 'optionC-tester-log';
+const log = [];
+const t0 = Date.now();
+function stamp(){const s=Math.floor((Date.now()-t0)/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function track(evt, detail){ const e={t:stamp(),evt,detail:detail||''}; log.push(e); console.log('[LOG]',e.t,e.evt,e.detail);
+  try{const prev=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');localStorage.setItem(LOG_KEY,JSON.stringify(prev.concat(e)))}catch(_){}
+  const d=document.getElementById('dkItems');
+  if(d){const it=document.createElement('div');it.className='dk-item';it.innerHTML=`<span class="dk-t">${e.t}</span>${e.evt}${e.detail?' — '+e.detail:''}`;d.insertBefore(it,d.firstChild);}
+  const c=document.getElementById('dkCount'); if(c)c.textContent=log.length;}
+let pendingScreen=stamp(), srcOpenAt=null, curScreen=1;
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button'); const id=e.target.closest('.draft,.result');
+  const ref=id?(id.querySelector('.draft-title')?.textContent||'').slice(0,40):'';
+  if(b?.dataset?.act==='source'){
+    if(srcOpenAt!==null){track('Đóng mảnh gốc sau '+stamp()+' (mở '+srcOpenAt+')'); srcOpenAt=null}
+    else {srcOpenAt=stamp(); track('Mở mảnh gốc của mục: '+ref)}
+  }
+}, true);
+window.addEventListener('beforeunload',()=>{track('Rời trang'); try{localStorage.setItem(LOG_KEY,JSON.stringify(log))}catch(_){}});
+track('Mở trang (Option C)');
+document.getElementById('mascotEl').onclick=()=>openLogViewer();
+/* ===== END LOG ===== */
+
+function setScreen(n){[1,2,3].forEach(i=>document.getElementById('screen'+i).classList.toggle('active',i===n)); track('Sang màn '+n+' (đang ở màn '+curScreen+' từ '+pendingScreen+')'); curScreen=n; pendingScreen=stamp()}
+function renderDrafts(){
+  const el=document.getElementById('draftList'); el.innerHTML='';
+  drafts.forEach(d=>{
+    if(state.removed.has(d.id)) return;
+    const blocked = d.requiresSource && !state.opened.has(d.id);
+    const card=document.createElement('div');
+    card.className='draft '+(d.confidence==='Thấp'?'warning ':'')+(state.approved.has(d.id)?'approved ':'');
+    card.innerHTML=`<div class="draft-top">
+      <div class="draft-title">${state.approved.has(d.id)?'✓ ':''}${d.title}</div>
+      <span class="confidence ${d.confidence==='Thấp'?'low':''}">Mức chắc: ${d.confidence}</span></div>
+      <div class="draft-text">${state.texts[d.id]}</div>
+      <div class="source">${d.source}</div>
+      ${d.requiresSource&&!state.opened.has(d.id)?'<div class="warn">Mở mảnh gốc trước khi xác nhận mục này nha.</div>':''}
+      <div class="source-box ${state.opened.has(d.id)?'open':''}">${d.detail}</div>
+      <div class="actions">
+        <button class="tiny ok" data-act="approve" data-id="${d.id}" ${blocked?'disabled':''}>${state.approved.has(d.id)?'Đã duyệt ✓':'Duyệt ✓'}</button>
+        <button class="tiny" data-act="source" data-id="${d.id}">${state.opened.has(d.id)?'Ẩn mảnh gốc':'Mở mảnh gốc'}</button>
+        <button class="tiny" data-act="edit" data-id="${d.id}">Sửa</button>
+        <button class="tiny del" data-act="remove" data-id="${d.id}">Bỏ mục</button>
+      </div>`;
+    el.appendChild(card);
+  });
+  updateProgress();
+}
+function updateProgress(){
+  const total=drafts.filter(d=>!state.removed.has(d.id)).length;
+  const approved=[...state.approved].filter(id=>!state.removed.has(id)).length;
+  document.getElementById('reviewCounter').textContent=`${approved}/${total} mục đã duyệt`;
+  document.getElementById('progressFill').style.width=(total?approved/total*100:0)+'%';
+  document.getElementById('continueBtn').disabled=approved===0;
+}
+function renderResults(){
+  const el=document.getElementById('resultList'); el.innerHTML='';
+  drafts.filter(d=>state.approved.has(d.id)&&!state.removed.has(d.id)).forEach(d=>{
+    const x=document.createElement('div'); x.className='result';
+    x.innerHTML=`<b>${d.title}</b><p>${state.texts[d.id]}</p><div class="source">${d.source}</div>`;
+    el.appendChild(x);
+  });
+  if(!el.children.length) el.innerHTML='<div style="font-size:12px;color:#777">Chưa có mục nào được duyệt nè.</div>';
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+function modal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').textContent=body;document.getElementById('modal').classList.add('open')}
+function resetAll(){state.approved.clear();state.removed.clear();state.opened.clear();drafts.forEach(d=>state.texts[d.id]=d.text);track('BỎ toàn bộ nháp — reset về 6 mảnh gốc');renderDrafts();setScreen(1);toast('Đã bỏ nháp — quay về 6 mảnh gốc')}
+function openLogViewer(){
+  const lines=log.map(x=>x.t+' · '+x.evt+(x.detail?' — '+x.detail:''));
+  document.getElementById('logBody').textContent = lines.length?lines.join('\n'):'Chưa có hành động nào.';
+  document.getElementById('logModal').classList.add('open');
+}
+document.getElementById('logClose').onclick=()=>document.getElementById('logModal').classList.remove('open');
+document.getElementById('dkBtn').onclick=()=>document.getElementById('logdock').classList.toggle('open');
+document.getElementById('dkDl').onclick=()=>{
+  const lines=log.map(x=>x.t+' · '+x.evt+(x.detail?' — '+x.detail:''));
+  const blob=new Blob(['OPTION C — tester behavior log\n\n'+lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='optionC-tester-log.txt';a.click()};
+document.getElementById('logDownload').onclick=()=>document.getElementById('dkDl').click();
+document.getElementById('generateBtn').onclick=()=>{setScreen(2);renderDrafts()};
+document.getElementById('viewFragmentsBtn').onclick=()=>{track('MỞ "Xem lại 6 mảnh gốc trước" — tự kiểm tra fixture trước khi soạn nháp');modal('6 mảnh bạn đã lưu lúc học','4 chụp màn hình slide 5–8 (IMG_0243…IMG_0246) · note "chưa hiểu slide 5: training khác inference chỗ nào" [04:12] · câu hỏi "cần nail fine-tuning vs. prompt cho thi" · highlight "LLMs predict the next token based on context" · thắc mắc "token có phải là 1 từ không?" · trạng thái "slide 8: ảnh mờ, đọc không rõ"')};
+document.getElementById('draftList').onclick=e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const id=+b.dataset.id, act=b.dataset.act;
+  const d=drafts.find(x=>x.id===id), ref=(d?.title||'').slice(0,46);
+  if(act==='source'){state.opened.has(id)?state.opened.delete(id):state.opened.add(id);renderDrafts()}
+  else if(act==='approve'){
+    if(state.approved.has(id)){state.approved.delete(id);track('BỎ duyệt mục: '+ref)}
+    else {state.approved.add(id);track('DUYỆT mục'+(d.confidence==='Thấp'?' (Mức chắc THẤP — có mở mảnh gốc trước)':'')+': '+ref)}
+    renderDrafts()}
+  else if(act==='remove'){state.removed.add(id);state.approved.delete(id);renderDrafts();track('BỎ mục: '+ref);toast('Đã bỏ mục khỏi nháp')}
+  else if(act==='edit'){const v=prompt('Sửa câu của mình thành câu của bạn:',state.texts[id]);
+    if(v!==null&&v.trim()){state.texts[id]=v.trim();renderDrafts();track('SỬA mục — câu gốc: "'+(d?.text||'').slice(0,60)+'…" → "'+v.slice(0,60)+'…"');toast('Đã cập nhật nha')}
+    else if(v!==null){track('Bấm Sửa mục: '+ref+' — hủy không đổi')}}
+};
+document.getElementById('continueBtn').onclick=()=>{track('Chuyển sang màn 3 — notes cuối gồm '+state.approved.size+' mục đã duyệt · '+state.removed.size+' mục bị bỏ');renderResults();setScreen(3)};
+document.getElementById('backReviewBtn').onclick=()=>setScreen(2);
+document.getElementById('discardDraftBtn').onclick=resetAll;
+document.getElementById('resetBtn').onclick=resetAll;
+document.getElementById('saveBtn').onclick=()=>{track('LƯU notes — '+state.approved.size+' mục (đã bỏ '+state.removed.size+')');toast('Notes của bạn đã lưu');
+  const lines=log.map(x=>x.t+' · '+x.evt+(x.detail?' — '+x.detail:''));
+  const blob=new Blob(['OPTION C — tester behavior log\n\n'+lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='optionC-tester-log.txt';a.click()};
+document.getElementById('modalClose').onclick=()=>document.getElementById('modal').classList.remove('open');
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open')};
+renderDrafts();
+</script>
+</body>
+</html>

@@ -1,0 +1,2423 @@
+<!--
+OPTION A — USER-LED TAGGING
+
+We expect:
+Learners can turn fragmented learning traces into useful
+review material by explicitly assigning their own intent,
+without AI interpreting the notes for them.
+
+Watch for:
+Whether testers understand the tags without explanation;
+whether they actually want to classify each item themselves;
+whether source context is enough to make a decision;
+whether manual tagging begins to feel like extra work.
+
+Do not explain:
+Do not tell the tester which tag to choose.
+Do not suggest that every item needs a tag.
+Do not explain what the system thinks a note means.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vlearn · AI Foundation — Option A (Tương tác & Ghi Log Hành Vi)</title>
+  <style>
+    :root {
+      --bg-app: #f6f5f1;
+      --card-bg: #ffffff;
+      --border-color: #e5e0d3;
+      --border-soft: #ece8df;
+      --text-main: #232220;
+      --text-muted: #6b6861;
+      --text-light: #9c978f;
+      --primary: #2f6f6a;
+      --primary-light: #eef5f4;
+      --primary-hover: #255a56;
+
+      /* CUTE PASTEL PALETTE */
+      --p-pink-bg: #FFF0F3;
+      --p-pink-border: #FFCCD5;
+      --p-pink-text: #C9184A;
+      --p-pink-active: #FF4D6D;
+
+      --p-purple-bg: #F5EDFF;
+      --p-purple-border: #E5D0FF;
+      --p-purple-text: #7E22CE;
+      --p-purple-active: #9333EA;
+
+      --p-green-bg: #EDFAF2;
+      --p-green-border: #C8EEDB;
+      --p-green-text: #166534;
+      --p-green-active: #16A34A;
+
+      --p-orange-bg: #FFF4EB;
+      --p-orange-border: #FFE0CB;
+      --p-orange-text: #C2410C;
+      --p-orange-active: #EA580C;
+
+      --p-blue-bg: #EDF7FF;
+      --p-blue-border: #CBE5FE;
+      --p-blue-text: #0369A1;
+      --p-blue-active: #0284C7;
+
+      /* Uncertainty warning */
+      --warn-bg: #FFF8EB;
+      --warn-border: #FFE6B3;
+      --warn-text: #8C5300;
+      --source-tag: #9A6B2F;
+
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* TOP TESTER BAR */
+    .tester-bar {
+      background: #1e1e1e;
+      color: #aaa;
+      padding: 6px 20px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+    .tester-badge {
+      background: #2a3439;
+      color: #80cbc4;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .tester-nav-btns {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .t-btn {
+      background: #2d3035;
+      border: 1px solid #4a4e54;
+      color: #ddd;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .t-btn:hover {
+      background: #3e434a;
+    }
+    .t-btn.active {
+      background: var(--primary);
+      border-color: #4da39d;
+      color: #fff;
+    }
+    .t-btn-reset {
+      background: #7a2822;
+      border-color: #9c3b33;
+      color: #fff;
+    }
+    .t-btn-reset:hover {
+      background: #96352d;
+    }
+    .t-btn-log {
+      background: #1b3d39;
+      border-color: #2f6f6a;
+      color: #80cbc4;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .t-btn-log:hover {
+      background: #275651;
+      color: #fff;
+    }
+    .log-count-bubble {
+      background: #2f6f6a;
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 10px;
+    }
+
+    /* VLEARN HEADER */
+    .vlearn-nav {
+      background: #ffffff;
+      height: 54px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-back-icon {
+      color: #666;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .nav-course-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .exam-countdown-badge {
+      background: #fff3e0;
+      color: #d84315;
+      border: 1px solid #ffcc80;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 12px;
+    }
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .nav-progress-bar {
+      width: 100px;
+      height: 6px;
+      background: #e3ded5;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .nav-progress-fill {
+      width: 100%;
+      height: 100%;
+      background: #2e7d32;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-pill {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0f2fe;
+      color: #0369a1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    /* MAIN CONTAINER */
+    .main-wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px 24px;
+      min-height: calc(100vh - 90px);
+    }
+
+    .screen-container {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .screen-container.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SCREEN 1: COMMON CONTEXT */
+    .welcome-banner {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .welcome-text h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .welcome-text p {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      max-width: 760px;
+      line-height: 1.6;
+    }
+    .btn-hero-cta {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 14px 26px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(47, 111, 106, 0.25);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-hero-cta:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(47, 111, 106, 0.35);
+    }
+
+    .context-grid-preview {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+    .slide-viewer-box {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+    }
+    .slide-header-bar {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #faf9f6;
+    }
+    .slide-body-mock {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .slide-footer-nav {
+      padding: 10px 20px;
+      border-top: 1px solid var(--border-soft);
+      background: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .traces-summary-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .trace-mini-item {
+      background: #faf8f5;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .trace-mini-item:hover {
+      background: #f1ede3;
+      border-color: #d8d3c5;
+    }
+    .trace-mini-meta {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--source-tag);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* SCREEN 2: CRITICAL INTERACTION */
+    .interaction-workspace {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .left-sticky-helper {
+      position: sticky;
+      top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .live-progress-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    }
+    .live-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .live-progress-header h3 {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .progress-count-pill {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .progress-track-lg {
+      height: 8px;
+      background: #eeeae0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-fill-lg {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .live-tags-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tag-stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .slide-quick-preview {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 16px 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .quick-preview-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--source-tag);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .traces-flow-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .interactive-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1.5px solid var(--border-color);
+      padding: 18px 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .interactive-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    }
+    .interactive-card.is-excluded {
+      opacity: 0.4;
+      background: #f4f2ed;
+      border-style: dashed;
+    }
+    .interactive-card.has-uncertainty {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+    }
+
+    .card-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-source-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--source-tag);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .card-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-peek-slide {
+      background: var(--primary-light);
+      border: 1.5px solid #a8d5cf;
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-peek-slide:hover {
+      background: #dcf2ed;
+      transform: translateY(-1px);
+    }
+    .btn-drop-item {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 11.5px;
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+    .btn-drop-item:hover {
+      color: #c0392b;
+      background: #fee;
+    }
+
+    .card-body-text {
+      font-size: 14.5px;
+      color: #1f2937;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .card-body-text.is-highlight {
+      border-left: 3px solid #ffca28;
+      padding-left: 10px;
+      font-style: italic;
+      color: #4b3e18;
+    }
+
+    .uncertainty-callout {
+      background: #fff3d6;
+      border: 1px solid #ffd175;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--warn-text);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    /* PASTEL TAG PILLS */
+    .tag-palette-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .tag-prompt-label {
+      font-size: 11.5px;
+      color: #777;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    .cute-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-width: 1.5px;
+      border-style: solid;
+    }
+    .cute-tag-pill:hover {
+      transform: translateY(-1.5px);
+    }
+    .cute-tag-pill:active {
+      transform: scale(0.96);
+    }
+
+    .pill-important {
+      background: var(--p-pink-bg);
+      border-color: var(--p-pink-border);
+      color: var(--p-pink-text);
+    }
+    .pill-unclear {
+      background: var(--p-purple-bg);
+      border-color: var(--p-purple-border);
+      color: var(--p-purple-text);
+    }
+    .pill-exam {
+      background: var(--p-green-bg);
+      border-color: var(--p-green-border);
+      color: var(--p-green-text);
+    }
+    .pill-ask {
+      background: var(--p-orange-bg);
+      border-color: var(--p-orange-border);
+      color: var(--p-orange-text);
+    }
+    .pill-custom {
+      background: var(--p-blue-bg);
+      border-color: var(--p-blue-border);
+      color: var(--p-blue-text);
+    }
+
+    .cute-tag-pill.is-active.pill-important {
+      background: var(--p-pink-active);
+      border-color: var(--p-pink-active);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(255, 77, 109, 0.35);
+    }
+    .cute-tag-pill.is-active.pill-unclear {
+      background: var(--p-purple-active);
+      border-color: var(--p-purple-active);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(147, 51, 234, 0.35);
+    }
+    .cute-tag-pill.is-active.pill-exam {
+      background: var(--p-green-active);
+      border-color: var(--p-green-active);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(22, 163, 74, 0.35);
+    }
+    .cute-tag-pill.is-active.pill-ask {
+      background: var(--p-orange-active);
+      border-color: var(--p-orange-active);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(234, 88, 12, 0.35);
+    }
+    .cute-tag-pill.is-active.pill-custom {
+      background: var(--p-blue-active);
+      border-color: var(--p-blue-active);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-add-tag-light {
+      background: #faf8f5;
+      border: 1.5px dashed #c0b9ab;
+      color: #666;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-add-tag-light:hover {
+      background: #f0ede6;
+      border-color: #888;
+      color: #222;
+    }
+
+    .excluded-msg-bar {
+      background: #f0eee8;
+      padding: 10px 14px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      color: #777;
+    }
+    .btn-revert-exclude {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      color: var(--primary);
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .flow-actions-bottom {
+      margin-top: 24px;
+      padding: 16px 20px;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* SCREEN 3: RESULT */
+    .result-sheet-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .result-header-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-header-card h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1a1a1a;
+    }
+
+    .result-cluster-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1.5px solid var(--border-color);
+      margin-bottom: 18px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .cluster-banner {
+      padding: 12px 20px;
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cluster-items-list {
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .cluster-single-item {
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #eee;
+    }
+    .cluster-single-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .item-source-anchor {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--source-tag);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-anchor-link {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-anchor-link:hover {
+      color: var(--primary-hover);
+    }
+    .item-text-render {
+      font-size: 14px;
+      color: #222;
+      line-height: 1.5;
+    }
+
+    .result-decision-bar {
+      margin-top: 24px;
+      padding: 18px 24px;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    }
+
+    /* COMMON BUTTONS */
+    .btn-main-green {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 11px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .btn-main-green:hover {
+      background: var(--primary-hover);
+    }
+    .btn-ghost-gray {
+      background: #ffffff;
+      color: #555;
+      border: 1.5px solid #d5d1c8;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-ghost-gray:hover {
+      background: #f7f5f0;
+      color: #222;
+    }
+
+    /* SLIDE MODAL */
+    .slide-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 20, 24, 0.75);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    .slide-modal-backdrop.is-open {
+      display: flex;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .slide-modal-window {
+      background: #ffffff;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 980px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+      border: 1px solid #444;
+    }
+
+    .slide-modal-topbar {
+      padding: 12px 20px;
+      background: #faf9f6;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .slide-modal-btn-close {
+      background: #eee;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #444;
+      cursor: pointer;
+    }
+    .slide-modal-btn-close:hover {
+      background: #ddd;
+      color: #111;
+    }
+
+    .slide-modal-tabs {
+      background: #f4f2ec;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      align-items: center;
+    }
+    .slide-tab-pill {
+      background: #ffffff;
+      border: 1px solid #d5d0c4;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .slide-tab-pill:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .slide-tab-pill.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .slide-modal-viewport {
+      padding: 24px 32px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #fbfbf9;
+    }
+
+    .slide-canvas-card {
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1.5px solid var(--border-color);
+      padding: 24px 28px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .slide-canvas-card.is-blurred-art {
+      filter: blur(2px);
+      opacity: 0.8;
+    }
+
+    .modal-trace-attached-box {
+      background: #eef7f6;
+      border: 1px solid #b5ded8;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1b524e;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .slide-modal-bottom-bar {
+      padding: 12px 20px;
+      background: #ffffff;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       USER BEHAVIOR LOG MODAL STYLING
+       ========================================================================== */
+    .log-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 20, 24, 0.75);
+      z-index: 100000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    .log-modal-backdrop.is-open {
+      display: flex;
+    }
+    .log-modal-window {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 820px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    .log-modal-header {
+      padding: 14px 20px;
+      background: #1e1e1e;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+    .log-count-tag {
+      background: #2f6f6a;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .log-toolbar-actions {
+      padding: 10px 20px;
+      background: #f4f2ec;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .log-modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #faf9f6;
+      font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+      font-size: 12.5px;
+    }
+    .log-item-row {
+      background: #ffffff;
+      border: 1px solid #e3ded5;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .log-time {
+      color: #777;
+      font-size: 11px;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+    .log-screen-badge {
+      background: #eef2f6;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 10.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .log-category-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .cat-tag { background: #dcfce7; color: #166534; }
+    .cat-untag { background: #fee2e2; color: #991b1b; }
+    .cat-slide { background: #e0f2fe; color: #0369a1; }
+    .cat-screen { background: #f3e8ff; color: #7e22ce; }
+    .cat-custom { background: #ffedd5; color: #c2410c; }
+    .cat-exclude { background: #fef3c7; color: #92400e; }
+    .cat-action { background: #f1f5f9; color: #334155; }
+
+    .log-desc {
+      color: #1f2937;
+      flex: 1;
+      word-break: break-word;
+    }
+    .log-modal-footer {
+      padding: 12px 20px;
+      background: #ffffff;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* TOAST */
+    .floating-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1f2937;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      z-index: 100001;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TESTER BAR (OUTSIDE FRAME) -->
+  <div class="tester-bar">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="tester-badge">OPTION A PROTOTYPE</span>
+      <span>User-led Tagging · AI Foundation</span>
+    </div>
+    <div class="tester-nav-btns">
+      <span>Chuyển bước nhanh:</span>
+      <button class="t-btn active" id="tab1" onclick="gotoScreen(1)">1. Common Context</button>
+      <button class="t-btn" id="tab2" onclick="gotoScreen(2)">2. Critical Interaction</button>
+      <button class="t-btn" id="tab3" onclick="gotoScreen(3)">3. Result / Decision</button>
+      <button class="t-btn t-btn-reset" onclick="triggerReset()">🔄 Reset về đầu</button>
+      <button class="t-btn t-btn-log" onclick="toggleLogModal()">
+        <span>📜 Log hành vi</span>
+        <span class="log-count-bubble" id="logCounter">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- VLEARN HEADER -->
+  <header class="vlearn-nav">
+    <div class="nav-left">
+      <span class="nav-back-icon" title="Quay lại khóa học">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </span>
+      <div class="nav-course-title">
+        <span>AI Foundation — Large Language Models</span>
+        <span class="exam-countdown-badge">⏰ Kỳ thi: Còn 4 ngày</span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <span>Đã hoàn thành 8/8 slide</span>
+      <div class="nav-progress-bar">
+        <div class="nav-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <button class="btn-main-green" style="padding:6px 14px; font-size:12.5px; border-radius:18px;" onclick="gotoScreen(2)">
+        <span>✨ Ghi chú ôn thi (6)</span>
+      </button>
+      <div class="user-pill" title="Học viên">DK</div>
+    </div>
+  </header>
+
+  <!-- APP CONTENT CONTAINER -->
+  <main class="main-wrap">
+
+    <!-- ====================================================================
+         SCREEN 1: COMMON CONTEXT (BỐI CẢNH CHUNG)
+         ==================================================================== -->
+    <section class="screen-container active" id="screen1">
+      <div class="welcome-banner">
+        <div class="welcome-text">
+          <h1>
+            <span>🎉</span>
+            <span>Bạn vừa hoàn thành bài học "Large Language Models"!</span>
+          </h1>
+          <p>
+            Kỳ thi kết thúc môn chỉ còn <strong>4 ngày nữa</strong>. Trong suốt buổi học, bạn đã để lại <strong>6 dấu vết</strong> (ghi chú nhanh, ảnh chụp sơ đồ, highlight, câu hỏi thắc mắc). Bây giờ, hãy biến chúng thành tài liệu ôn tập của riêng bạn.
+          </p>
+        </div>
+        <button class="btn-hero-cta" onclick="gotoScreen(2)">
+          <span>Bắt đầu tạo ghi chú ôn thi</span>
+          <span>→</span>
+        </button>
+      </div>
+
+      <div class="context-grid-preview">
+        <!-- Center Slide Mockup with Interactive Buttons -->
+        <div class="slide-viewer-box">
+          <div class="slide-header-bar">
+            <span style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase;">
+              Trình xem bài giảng · <span id="s1SlideNum">Slide 8 / 8</span>
+            </span>
+            <button class="btn-peek-slide" onclick="openSlideModal(currentS1Slide, null, 'Màn 1')">
+              🔍 Mở xem toàn màn hình
+            </button>
+          </div>
+          
+          <div class="slide-body-mock" id="s1SlideBody" onclick="openSlideModal(currentS1Slide, null, 'Màn 1')">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <div class="slide-footer-nav">
+            <button class="t-btn" onclick="stepS1Slide(-1)">❮ Slide trước</button>
+            <span style="font-size:12px; color:#666;" id="s1Counter">Slide 8 / 8 (Nhấp để xem)</span>
+            <button class="t-btn" onclick="stepS1Slide(1)">Slide sau ❯</button>
+          </div>
+        </div>
+
+        <!-- Traces Preview List -->
+        <div class="traces-summary-card">
+          <div style="font-size:12px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px;">
+            6 Dấu vết bạn đã lưu (Nhấp để xem slide):
+          </div>
+          <div class="trace-mini-item" onclick="openSlideModal(2, 1, 'Màn 1')">
+            <div class="trace-mini-meta">
+              <span>Slide 2 · Screenshot</span>
+              <span style="color:var(--primary);">Xem slide ↗</span>
+            </div>
+            Sơ đồ Prompt → Tokenization → LLM → Output
+          </div>
+          <div class="trace-mini-item" onclick="openSlideModal(3, 2, 'Màn 1')">
+            <div class="trace-mini-meta">
+              <span>Slide 3 · Note</span>
+              <span style="color:var(--primary);">Xem slide ↗</span>
+            </div>
+            “chưa hiểu token khác word như thế nào”
+          </div>
+          <div class="trace-mini-item" onclick="openSlideModal(6, 3, 'Màn 1')">
+            <div class="trace-mini-meta">
+              <span>Slide 6 · Note</span>
+              <span style="color:var(--primary);">Xem slide ↗</span>
+            </div>
+            “cần ôn kỹ hallucination cho thi”
+          </div>
+          <div class="trace-mini-item" onclick="openSlideModal(4, 4, 'Màn 1')">
+            <div class="trace-mini-meta">
+              <span>Slide 4 · Highlight</span>
+              <span style="color:var(--primary);">Xem slide ↗</span>
+            </div>
+            “Transformer uses self-attention to model relationships...”
+          </div>
+          <div class="trace-mini-item" onclick="openSlideModal(5, 5, 'Màn 1')">
+            <div class="trace-mini-meta">
+              <span>Slide 5 · Câu hỏi</span>
+              <span style="color:var(--primary);">Xem slide ↗</span>
+            </div>
+            “thắc mắc: temperature cao thì output thay đổi thế nào?”
+          </div>
+          <div class="trace-mini-item" style="background:#fff8eb; border-color:#ffe6b3;" onclick="openSlideModal(7, 6, 'Màn 1')">
+            <div class="trace-mini-meta" style="color:#8c5300;">
+              <span>Slide 7 · Chưa rõ</span>
+              <span style="color:#d84315;">Xem slide ↗</span>
+            </div>
+            “slide 7: sơ đồ RAG hơi mờ, chưa đọc rõ...”
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 2: CRITICAL INTERACTION (OPTION A - ĐƠN GIẢN & TỰ DO GẮN TAG)
+         ==================================================================== -->
+    <section class="screen-container" id="screen2">
+      <div class="interaction-workspace">
+        
+        <!-- LEFT HELPER: LIVE SUMMARY & SLIDE PEEK -->
+        <div class="left-sticky-helper">
+          
+          <!-- Live Summary Card -->
+          <div class="live-progress-card">
+            <div class="live-progress-header">
+              <h3>Tiến độ phân loại</h3>
+              <span class="progress-count-pill" id="liveProgressCount">0 / 6 mục</span>
+            </div>
+            <div class="progress-track-lg">
+              <div class="progress-fill-lg" id="liveProgressBar"></div>
+            </div>
+
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#999; margin-bottom:6px; letter-spacing:0.4px;">
+              Số lượng tag đã gắn:
+            </div>
+            <div class="live-tags-breakdown">
+              <div class="tag-stat-row pill-exam">
+                <span>🎯 Ôn thi</span>
+                <span id="statExam">0</span>
+              </div>
+              <div class="tag-stat-row pill-unclear">
+                <span>❓ Chưa hiểu</span>
+                <span id="statUnclear">0</span>
+              </div>
+              <div class="tag-stat-row pill-important">
+                <span>⭐ Quan trọng</span>
+                <span id="statImportant">0</span>
+              </div>
+              <div class="tag-stat-row pill-ask">
+                <span>👨‍🏫 Hỏi giảng viên</span>
+                <span id="statAsk">0</span>
+              </div>
+              <div id="customTagStats"></div>
+            </div>
+          </div>
+
+          <!-- Slide Quick Previewer Box with Real Button -->
+          <div class="slide-quick-preview" id="slidePeekBox">
+            <div class="quick-preview-header">
+              <span id="peekTitle">Ngữ cảnh gốc: Slide 2</span>
+              <button class="btn-peek-slide" style="padding:2px 7px; font-size:11px;" onclick="openSlideModal(activePeekSlide, null, 'Màn 2 Peek')">
+                Phóng to ↗
+              </button>
+            </div>
+            <div id="peekBody" style="font-size:12.5px; color:#444; line-height:1.5;">
+              Nhấp <strong>[👁️ Xem slide X]</strong> ở bất kỳ thẻ nào để mở trình xem slide ngay lập tức!
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: INTERACTIVE CARDS LIST -->
+        <div class="traces-flow-column" id="tracesCardsContainer">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+
+      </div>
+
+      <!-- BOTTOM ACTIONS BAR -->
+      <div class="flow-actions-bottom">
+        <button class="btn-ghost-gray" onclick="gotoScreen(1)">
+          ← Quay lại bối cảnh
+        </button>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span style="font-size:12.5px; color:#777;" id="untaggedHint">
+            6 nội dung chưa được phân loại.
+          </span>
+          <button class="btn-main-green" onclick="gotoScreen(3)">
+            <span>Xem ghi chú ôn thi</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 3: RESULT / USER DECISION (SỔ TAY ÔN THI ĐƠN GIẢN, TRỰC QUAN)
+         ==================================================================== -->
+    <section class="screen-container" id="screen3">
+      <div class="result-sheet-wrap">
+        
+        <div class="result-header-card">
+          <div>
+            <h2>Sổ tay Ghi chú Ôn thi</h2>
+            <p style="font-size:13px; color:#666; margin-top:3px;">
+              Khóa học: <strong>AI Foundation · Large Language Models</strong> (Kỳ thi cách 4 ngày)
+            </p>
+          </div>
+          <span style="font-size:12px; font-weight:700; background:#e8f5e9; color:#1b5e20; padding:4px 12px; border-radius:20px;">
+            ✓ Sắp xếp theo ý của bạn
+          </span>
+        </div>
+
+        <!-- DYNAMIC CLUSTERS BY USER EXPLICIT TAGS -->
+        <div id="resultClustersList">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- USER DECISION BAR -->
+        <div class="result-decision-bar">
+          <div style="display:flex; gap:10px;">
+            <button class="btn-ghost-gray" onclick="gotoScreen(2)">
+              ✏️ Sửa lại tag
+            </button>
+            <button class="btn-ghost-gray" style="color:#b91c1c; border-color:#fca5a5;" onclick="triggerReset()">
+              🔄 Bắt đầu lại
+            </button>
+          </div>
+          <button class="btn-main-green" onclick="confirmSaveNotes()">
+            <span>💾 Lưu ghi chú ôn thi</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       SLIDE VIEWER MODAL (TRÌNH XEM SLIDE TƯƠNG TÁC HOÀN CHỈNH)
+       ======================================================================== -->
+  <div class="slide-modal-backdrop" id="slideModalBackdrop" onclick="handleBackdropClick(event)">
+    <div class="slide-modal-window">
+      
+      <!-- Modal Top Bar -->
+      <div class="slide-modal-topbar">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="background:var(--primary-light); color:var(--primary); font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; text-transform:uppercase;">
+            Bài giảng chính quy
+          </span>
+          <span style="font-weight:700; font-size:14px; color:#1a1a1a;">
+            AI Foundation — Large Language Models
+          </span>
+        </div>
+        <button class="slide-modal-btn-close" onclick="closeSlideModal()">
+          ✕ Đóng slide
+        </button>
+      </div>
+
+      <!-- Slide Nav Tabs (1 - 8) -->
+      <div class="slide-modal-tabs">
+        <span style="font-size:11.5px; font-weight:700; color:#777; margin-right:4px;">Chuyển slide:</span>
+        <button class="slide-tab-pill" id="tabSlide1" onclick="switchModalSlide(1)">Slide 1</button>
+        <button class="slide-tab-pill" id="tabSlide2" onclick="switchModalSlide(2)">Slide 2 (Sơ đồ)</button>
+        <button class="slide-tab-pill" id="tabSlide3" onclick="switchModalSlide(3)">Slide 3 (Token/Word)</button>
+        <button class="slide-tab-pill" id="tabSlide4" onclick="switchModalSlide(4)">Slide 4 (Attention)</button>
+        <button class="slide-tab-pill" id="tabSlide5" onclick="switchModalSlide(5)">Slide 5 (Temperature)</button>
+        <button class="slide-tab-pill" id="tabSlide6" onclick="switchModalSlide(6)">Slide 6 (Hallucination)</button>
+        <button class="slide-tab-pill" id="tabSlide7" onclick="switchModalSlide(7)">Slide 7 (RAG - Mờ)</button>
+        <button class="slide-tab-pill" id="tabSlide8" onclick="switchModalSlide(8)">Slide 8 (Tổng kết)</button>
+      </div>
+
+      <!-- Slide Canvas Viewport -->
+      <div class="slide-modal-viewport">
+        <div class="slide-canvas-card" id="modalSlideCanvas">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Attached User Trace Highlight -->
+        <div class="modal-trace-attached-box" id="modalTraceBox" style="display:none;">
+          <span style="font-size:16px;">📌</span>
+          <div>
+            <strong>Ghi chú bạn đã lưu tại Slide này:</strong>
+            <div id="modalTraceText" style="margin-top:2px; font-style:italic;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Bottom Navigation Controls -->
+      <div class="slide-modal-bottom-bar">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn-ghost-gray" style="padding:6px 14px; font-size:12.5px;" onclick="modalStepSlide(-1)">
+            ❮ Slide trước
+          </button>
+          <span style="font-weight:700; font-size:13px; color:#333;" id="modalSlideIndicator">
+            Slide 2 / 8
+          </span>
+          <button class="btn-ghost-gray" style="padding:6px 14px; font-size:12.5px;" onclick="modalStepSlide(1)">
+            Slide sau ❯
+          </button>
+        </div>
+
+        <button class="btn-main-green" style="padding:7px 18px; font-size:13px;" onclick="closeSlideModal()">
+          ✓ Đã xem xong, quay lại làm việc
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       USER BEHAVIOR LOG MODAL (NHẬT KÝ HÀNH VI NGƯỜI DÙNG)
+       ======================================================================== -->
+  <div class="log-modal-backdrop" id="logModalBackdrop" onclick="handleLogBackdropClick(event)">
+    <div class="log-modal-window">
+      
+      <div class="log-modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:16px;">📜</span>
+          <span style="font-weight:800; font-size:14.5px;">Nhật ký hành vi người dùng (User Action Log)</span>
+          <span class="log-count-tag" id="logModalCount">0 hành động</span>
+        </div>
+        <button class="slide-modal-btn-close" onclick="closeLogModal()">✕ Đóng</button>
+      </div>
+
+      <div class="log-toolbar-actions">
+        <button class="t-btn" onclick="copyActionLogs()">📋 Sao chép toàn bộ Log</button>
+        <button class="t-btn" onclick="downloadActionLogs()">📥 Xuất file text (.txt)</button>
+        <button class="t-btn" style="color:#f87171; border-color:#7f1d1d;" onclick="clearActionLogs()">🗑️ Xóa Log</button>
+        <span style="font-size:11px; color:#888; margin-left:auto;">Tự động ghi nhận thời gian & thao tác thực tế</span>
+      </div>
+
+      <div class="log-modal-body" id="logListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="log-modal-footer">
+        <span style="font-size:11.5px; color:#666;">
+          Dữ liệu log phục vụ đánh giá Usability Testing theo tiêu chuẩn Day 18.
+        </span>
+        <button class="btn-main-green" style="padding:6px 14px; font-size:12px;" onclick="closeLogModal()">
+          Đóng cửa sổ
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST -->
+  <div class="floating-toast" id="appToast">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">Thông báo</span>
+  </div>
+
+  <!-- ========================================================================
+       JAVASCRIPT: LOGIC & COMPLETE SLIDE INTERACTIVITY & BEHAVIOR LOGGING
+       ======================================================================== -->
+  <script>
+    /* USER ACTION LOGGING ENGINE */
+    const userActionLogs = [];
+
+    function logUserAction(category, description, screenName) {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0]; // HH:MM:SS
+      const activeScreen = screenName || (currentScreen === 1 ? 'Màn 1' : currentScreen === 2 ? 'Màn 2' : 'Màn 3');
+
+      const entry = {
+        id: userActionLogs.length + 1,
+        timestamp: timeStr,
+        screen: activeScreen,
+        category: category,
+        description: description
+      };
+
+      userActionLogs.push(entry);
+
+      // Update counters
+      const counterEl = document.getElementById('logCounter');
+      if (counterEl) counterEl.innerText = userActionLogs.length;
+
+      const modalCountEl = document.getElementById('logModalCount');
+      if (modalCountEl) modalCountEl.innerText = `${userActionLogs.length} hành động`;
+
+      // Log to browser console
+      console.log(`[USER LOG #${entry.id}] [${timeStr}] [${activeScreen}] [${category}] ${description}`);
+
+      // If log modal is currently open, re-render it
+      const modal = document.getElementById('logModalBackdrop');
+      if (modal && modal.classList.contains('is-open')) {
+        renderLogList();
+      }
+    }
+
+    function toggleLogModal() {
+      const modal = document.getElementById('logModalBackdrop');
+      if (modal.classList.contains('is-open')) {
+        closeLogModal();
+      } else {
+        openLogModal();
+      }
+    }
+
+    function openLogModal() {
+      renderLogList();
+      document.getElementById('logModalBackdrop').classList.add('is-open');
+    }
+
+    function closeLogModal() {
+      document.getElementById('logModalBackdrop').classList.remove('is-open');
+    }
+
+    function handleLogBackdropClick(event) {
+      if (event.target.id === 'logModalBackdrop') {
+        closeLogModal();
+      }
+    }
+
+    function renderLogList() {
+      const container = document.getElementById('logListContainer');
+      if (userActionLogs.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:30px; color:#888;">
+            Chưa có hành động nào được ghi nhận. Hãy thao tác trên prototype!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = userActionLogs.slice().reverse().map(log => {
+        let catClass = 'cat-action';
+        if (log.category.includes('GẮN TAG')) catClass = 'cat-tag';
+        else if (log.category.includes('BỎ TAG')) catClass = 'cat-untag';
+        else if (log.category.includes('SLIDE')) catClass = 'cat-slide';
+        else if (log.category.includes('MÀN')) catClass = 'cat-screen';
+        else if (log.category.includes('TẠO TAG')) catClass = 'cat-custom';
+        else if (log.category.includes('BỎ MỤC')) catClass = 'cat-exclude';
+
+        return `
+          <div class="log-item-row">
+            <span class="log-time">[${log.timestamp}]</span>
+            <span class="log-screen-badge">${log.screen}</span>
+            <span class="log-category-badge ${catClass}">[${log.category}]</span>
+            <span class="log-desc">${log.description}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function copyActionLogs() {
+      if (userActionLogs.length === 0) {
+        showToast("Chưa có log để sao chép!");
+        return;
+      }
+
+      let exportText = `=====================================================\n`;
+      exportText += `NHẬT KÝ HÀNH VI NGƯỜI DÙNG (USER BEHAVIOR LOG)\n`;
+      exportText += `Khóa học: AI Foundation — Large Language Models\n`;
+      exportText += `Phương án: Option A (User-led Tagging)\n`;
+      exportText += `Thời điểm xuất log: ${new Date().toLocaleString()}\n`;
+      exportText += `Tổng số hành động: ${userActionLogs.length}\n`;
+      exportText += `=====================================================\n\n`;
+
+      userActionLogs.forEach(log => {
+        exportText += `[${log.timestamp}] [${log.screen}] [${log.category}] ${log.description}\n`;
+      });
+
+      navigator.clipboard.writeText(exportText).then(() => {
+        showToast("📋 Đã sao chép toàn bộ Log vào Clipboard!");
+      }).catch(() => {
+        showToast("Sao chép thất bại, vui lòng thử lại!");
+      });
+    }
+
+    function downloadActionLogs() {
+      if (userActionLogs.length === 0) {
+        showToast("Chưa có log để xuất file!");
+        return;
+      }
+
+      let exportText = `=====================================================\n`;
+      exportText += `NHẬT KÝ HÀNH VI NGƯỜI DÙNG (USER BEHAVIOR LOG)\n`;
+      exportText += `Khóa học: AI Foundation — Large Language Models\n`;
+      exportText += `Phương án: Option A (User-led Tagging)\n`;
+      exportText += `Thời điểm xuất log: ${new Date().toLocaleString()}\n`;
+      exportText += `Tổng số hành động: ${userActionLogs.length}\n`;
+      exportText += `=====================================================\n\n`;
+
+      userActionLogs.forEach(log => {
+        exportText += `[${log.timestamp}] [${log.screen}] [${log.category}] ${log.description}\n`;
+      });
+
+      const blob = new Blob([exportText], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `user-action-log-${Date.now()}.txt`;
+      link.click();
+      showToast("📥 Đã tải file nhật ký hành vi!");
+    }
+
+    function clearActionLogs() {
+      if (confirm("Bạn có chắc chắn muốn xóa toàn bộ log hiện tại không?")) {
+        userActionLogs.length = 0;
+        document.getElementById('logCounter').innerText = '0';
+        document.getElementById('logModalCount').innerText = '0 hành động';
+        renderLogList();
+        showToast("Đã xóa sạch log.");
+      }
+    }
+
+    /* 6 DATA FIXTURES THEO ĐẶC TẢ */
+    const RAW_TRACES = [
+      {
+        id: 1,
+        sourceSlide: 2,
+        sourceType: "Screenshot",
+        sourceMeta: "Slide 2 · [02:15]",
+        content: "Screenshot sơ đồ kiến trúc: Prompt → Tokenization → LLM → Output",
+        tags: [],
+        isUncertain: false,
+        isExcluded: false,
+        slideSnippet: "Slide 2 trình bày luồng xử lý văn bản: Prompt được tách từ qua Tokenizer thành vector nhúng trước khi đưa vào các tầng LLM."
+      },
+      {
+        id: 2,
+        sourceSlide: 3,
+        sourceType: "Quick note",
+        sourceMeta: "Slide 3 · [05:40]",
+        content: "“chưa hiểu token khác word như thế nào”",
+        tags: [],
+        isUncertain: false,
+        isExcluded: false,
+        slideSnippet: "Slide 3: Token là đơn vị subword cơ bản của BPE (Byte-Pair Encoding). Trung bình 100 từ tiếng Anh tương đương khoảng 130 tokens."
+      },
+      {
+        id: 3,
+        sourceSlide: 6,
+        sourceType: "Learner note",
+        sourceMeta: "Slide 6 · [14:20]",
+        content: "“cần ôn kỹ hallucination cho thi”",
+        tags: [],
+        isUncertain: false,
+        isExcluded: false,
+        slideSnippet: "Slide 6: Ảo giác (Hallucination) chiếm 30% cấu trúc điểm thi cuối kỳ. Cần nắm rõ nguyên nhân và các kỹ thuật giảm thiểu (RAG, Grounding)."
+      },
+      {
+        id: 4,
+        sourceSlide: 4,
+        sourceType: "Highlight",
+        sourceMeta: "Slide 4 · [08:12]",
+        content: "“Transformer uses self-attention to model relationships between tokens”",
+        tags: [],
+        isUncertain: false,
+        isExcluded: false,
+        slideSnippet: "Slide 4: Cơ chế Self-Attention tính toán ma trận tương quan giữa tất cả các cặp token với công thức Attention(Q, K, V) = softmax(QK^T / √d_k)V."
+      },
+      {
+        id: 5,
+        sourceSlide: 5,
+        sourceType: "Question",
+        sourceMeta: "Slide 5 · [11:05]",
+        content: "“thắc mắc: temperature cao thì output thay đổi thế nào?”",
+        tags: [],
+        isUncertain: false,
+        isExcluded: false,
+        slideSnippet: "Slide 5: Temperature điều chỉnh độ phẳng của phân phối xác suất Softmax. T > 0.8 làm văn bản sinh ra đa dạng, ngẫu nhiên hơn; T < 0.2 câu trả lời chuẩn xác, đơn điệu."
+      },
+      {
+        id: 6,
+        sourceSlide: 7,
+        sourceType: "Uncertain trace",
+        sourceMeta: "Slide 7 · [16:30]",
+        content: "“slide 7: sơ đồ RAG hơi mờ, chưa đọc rõ phần retrieval”",
+        tags: [],
+        isUncertain: true,
+        isExcluded: false,
+        slideSnippet: "Slide 7: [⚠ Sơ đồ bị mờ độ phân giải ở bước Vector Index] Cần đối chiếu lại với Giảng viên trước buổi thi."
+      }
+    ];
+
+    /* FULL EDUCATIONAL CONTENT FOR ALL 8 SLIDES */
+    const ALL_SLIDES = {
+      1: {
+        num: 1,
+        title: "Giới thiệu Large Language Models (LLM)",
+        subtitle: "Định nghĩa, bài toán cốt lõi Next-Token Prediction",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p>Mô hình ngôn ngữ lớn (LLM) là các mạng nơ-ron học sâu được huấn luyện trên hàng ngàn tỷ token văn bản để tối ưu hàm mất mát dự đoán từ tiếp theo:</p>
+            <div style="background:#f3f4f6; border-radius:10px; padding:12px 16px; margin:14px 0; font-family:monospace; font-size:13px; color:#1f2937;">
+              P(w_t | w_1, w_2, ..., w_{t-1})
+            </div>
+            <div style="background:#eef7f6; border-left:4px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0; margin-top:12px;">
+              <strong>Điểm cốt lõi:</strong> LLM không suy nghĩ như con người mà chỉ tối ưu phân phối xác suất thống kê của chuỗi các token.
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      },
+      2: {
+        num: 2,
+        title: "Kiến trúc cơ bản: Prompt & Tokenization",
+        subtitle: "Quy trình xử lý từ văn bản thô sang vector nhúng",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p>Văn bản đầu vào (Prompt) không thể nạp trực tiếp vào mạng nơ-ron mà phải trải qua quá trình tách từ và mã hóa thành các số nguyên (Token IDs).</p>
+            
+            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:18px; margin:16px 0; display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:10px;">
+              <div style="background:#fff; border:2px solid #2f6f6a; border-radius:8px; padding:10px 16px; font-weight:700; color:#2f6f6a; text-align:center;">
+                📝 Prompt
+                <div style="font-size:11px; color:#666; font-weight:normal;">"Thời tiết hôm nay..."</div>
+              </div>
+              <span style="font-size:20px; color:#888;">➔</span>
+              <div style="background:#eef4f3; border:2px solid #2f6f6a; border-radius:8px; padding:10px 16px; font-weight:700; color:#1d4e4a; text-align:center;">
+                ⚙️ Tokenization
+                <div style="font-size:11px; color:#666; font-weight:normal;">[1452, 9821, 302]</div>
+              </div>
+              <span style="font-size:20px; color:#888;">➔</span>
+              <div style="background:#fff; border:2px solid #2f6f6a; border-radius:8px; padding:10px 16px; font-weight:700; color:#2f6f6a; text-align:center;">
+                🧠 LLM (Transformer)
+                <div style="font-size:11px; color:#666; font-weight:normal;">Self-Attention Layers</div>
+              </div>
+              <span style="font-size:20px; color:#888;">➔</span>
+              <div style="background:#fff; border:2px solid #2f6f6a; border-radius:8px; padding:10px 16px; font-weight:700; color:#2f6f6a; text-align:center;">
+                💬 Output
+                <div style="font-size:11px; color:#666; font-weight:normal;">"rất đẹp."</div>
+              </div>
+            </div>
+
+            <div style="background:#fff8e1; border-left:4px solid #ffb300; padding:10px 14px; border-radius:0 8px 8px 0;">
+              <strong>Ghi chú:</strong> Đây là sơ đồ nguyên bản mà bạn đã lưu vào lúc 02:15.
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      },
+      3: {
+        num: 3,
+        title: "Phân biệt Token và Word trong NLP",
+        subtitle: "Byte-Pair Encoding (BPE) và Subword Tokenization",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p>Một <strong>Token</strong> không tương đương với một <strong>Word</strong> (từ hoàn chỉnh):</p>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;">
+              <div style="background:#fff; border:1px solid #ddd; border-radius:10px; padding:14px;">
+                <div style="font-weight:700; color:#1e56a0; margin-bottom:6px;">Từ ngữ tự nhiên (Word)</div>
+                <div style="font-size:13px; color:#555;">
+                  • Từ hoàn chỉnh được phân tách bằng dấu cách.<br>
+                  • Ví dụ: từ <em>"unhappiness"</em> = <strong>1 Word</strong>.
+                </div>
+              </div>
+              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px;">
+                <div style="font-weight:700; color:#15803d; margin-bottom:6px;">Đơn vị Token (Subwords)</div>
+                <div style="font-size:13px; color:#166534;">
+                  • Tách thành các đoạn âm vị hay dùng: <em>["un", "happi", "ness"]</em> = <strong>3 Tokens</strong>.<br>
+                  • Trung bình tiếng Anh: <strong>100 words ≈ 130 tokens</strong>.
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#eef7f6; border-left:4px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0;">
+              <strong>Ý nghĩa:</strong> Chi phí tính toán và độ dài cửa sổ ngữ cảnh (Context Window) luôn được tính theo đơn vị Token, không tính theo Word.
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      },
+      4: {
+        num: 4,
+        title: "Cơ chế Self-Attention trong Transformer",
+        subtitle: "Mối liên kết trực tiếp giữa các token trong chuỗi",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p><strong>Transformer uses self-attention to model relationships between tokens</strong> mà không cần duyệt tuần tự như RNN/LSTM:</p>
+            
+            <div style="background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:16px 0; font-family:monospace; font-size:14px; color:#111; text-align:center;">
+              Attention(Q, K, V) = softmax( (Q · K<sup>T</sup>) / √d<sub>k</sub> ) · V
+            </div>
+
+            <div style="display:flex; gap:12px; font-size:13px; color:#555; margin-bottom:12px;">
+              <span style="background:#fee2e2; color:#991b1b; padding:4px 8px; border-radius:6px; font-weight:700;">Q: Query</span>
+              <span style="background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:700;">K: Key</span>
+              <span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-weight:700;">V: Value</span>
+            </div>
+
+            <p>Cơ chế này cho phép từ "it" trong câu liên kết thẳng đến danh từ "the animal" ở phía trước với độ trễ tính toán O(1).</p>
+          </div>
+        `,
+        isBlurred: false
+      },
+      5: {
+        num: 5,
+        title: "Tham số sinh văn bản: Temperature & Top-p",
+        subtitle: "Kiểm soát tính ngẫu nhiên và sáng tạo của câu trả lời",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p>Khi sinh token kế tiếp, giá trị nhiệt độ (Temperature - T) điều chỉnh hàm phân phối xác suất:</p>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;">
+              <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px;">
+                <div style="font-weight:700; color:#1d4ed8; margin-bottom:4px;">Temperature Thấp (T &lt; 0.3)</div>
+                <div style="font-size:13px; color:#1e40af;">
+                  • Phân phối dốc nhọn, tập trung vào token xác suất cao nhất.<br>
+                  • Kết quả: Chính xác, xác định, ít sáng tạo (dùng cho Lập trình, Toán học).
+                </div>
+              </div>
+              <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:14px;">
+                <div style="font-weight:700; color:#c2410c; margin-bottom:4px;">Temperature Cao (T &gt; 0.8)</div>
+                <div style="font-size:13px; color:#9a3412;">
+                  • Phân phối làm phẳng, các token ít phổ biến vẫn có cơ hội xuất hiện.<br>
+                  • Kết quả: Đa dạng, sáng tạo, tự nhiên nhưng dễ bị lan man.
+                </div>
+              </div>
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      },
+      6: {
+        num: 6,
+        title: "Vấn đề Ảo giác (Hallucination) & Đánh giá",
+        subtitle: "Khi mô hình sinh ra nội dung tự tin nhưng sai sự thật",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <div style="background:#fee2e2; border-left:4px solid #ef4444; padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:14px;">
+              <strong style="color:#b91c1c;">🎯 Trọng tâm ôn thi:</strong> Khái niệm ảo giác và phương pháp khắc phục chiếm <strong>30% điểm thi cuối kỳ</strong>!
+            </div>
+            <p><strong>Ảo giác</strong> xảy ra do mô hình chỉ học sự liên kết từ ngữ theo xác suất mà không có hệ thống kiểm chứng chân lý nội tại.</p>
+            <div style="margin-top:10px;">
+              <strong>Các giải pháp khắc phục chính:</strong>
+              <ul style="padding-left:20px; font-size:13.5px; margin-top:4px;">
+                <li>Retrieval-Augmented Generation (RAG) để neo nguồn tài liệu thực tế.</li>
+                <li>Chain-of-Thought (CoT) buộc mô hình suy luận từng bước.</li>
+                <li>Hạ Temperature về gần 0 khi yêu cầu trích xuất dữ kiện.</li>
+              </ul>
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      },
+      7: {
+        num: 7,
+        title: "Kiến trúc Retrieval-Augmented Generation (RAG)",
+        subtitle: "Kết hợp cơ sở dữ liệu ngoài để kiểm chứng và sinh phản hồi",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            
+            <div style="background:#fff8eb; border:1px solid #ffd8a8; padding:10px 14px; border-radius:8px; margin-bottom:14px; color:#8c5300; display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">⚠️</span>
+              <div>
+                <strong>Cảnh báo chất lượng tài liệu:</strong> Sơ đồ RAG gốc bị mờ ở bước Dense Retrieval & Vector Database.
+              </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:12px; padding:20px; text-align:center; filter:blur(2.2px); opacity:0.8; user-select:none;">
+              <div style="font-size:15px; font-weight:700; color:#334155; margin-bottom:10px;">
+                [User Question] ➔ [Retriever (Vector DB)] ➔ [Top-K Chunks] ➔ [Prompt Augmentation] ➔ [LLM Generator]
+              </div>
+              <div style="font-size:12px; color:#64748b;">
+                (Sơ đồ công thức phân rã embedding và vector cosine similarity bị mờ)
+              </div>
+            </div>
+
+            <div style="margin-top:14px; font-size:13px; color:#666;">
+              💡 <em>Tình huống: Khi gặp slide mờ hoặc chưa rõ, người học có thể tự gán tag <strong>[Chưa hiểu]</strong> hoặc <strong>[Hỏi giảng viên]</strong> để xử lý sau buổi học.</em>
+            </div>
+          </div>
+        `,
+        isBlurred: true
+      },
+      8: {
+        num: 8,
+        title: "Tổng kết Kiến trúc Large Language Models",
+        subtitle: "Chúc mừng bạn đã hoàn thành toàn bộ 8 slide bài học!",
+        contentHtml: `
+          <div style="font-size:14.5px; line-height:1.6; color:#374151;">
+            <p>Bạn đã hoàn thành trọn vẹn 8 nội dung kiến thức của bài học:</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0; font-size:13px;">
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 1. Giới thiệu LLM & Next-Token</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 2. Prompt & Tokenization</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 3. Token vs Word (BPE)</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 4. Self-Attention Transformer</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 5. Temperature & Top-p</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 6. Hallucination (30% thi)</div>
+              <div style="background:#fff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px;">✓ 7. RAG Architecture</div>
+              <div style="background:#eef7f6; border:1.5px solid var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; color:var(--primary);">★ 8. Sẵn sàng ôn thi (4 ngày nữa)</div>
+            </div>
+            <div style="background:#edf7ed; border-left:4px solid #2e7d32; padding:10px 14px; border-radius:0 8px 8px 0; color:#1e4620;">
+              <strong>Bước tiếp theo:</strong> Bắt đầu chuyển 6 mảnh dấu vết thành ghi chú ôn tập cá nhân.
+            </div>
+          </div>
+        `,
+        isBlurred: false
+      }
+    };
+
+    /* PASTEL TAGS CONFIGURATION */
+    const PRESET_TAGS = [
+      { id: "important", label: "Quan trọng", emoji: "⭐", pillClass: "pill-important" },
+      { id: "unclear",   label: "Chưa hiểu",   emoji: "❓", pillClass: "pill-unclear" },
+      { id: "exam",      label: "Ôn thi",      emoji: "🎯", pillClass: "pill-exam" },
+      { id: "ask",       label: "Hỏi giảng viên", emoji: "👨‍🏫", pillClass: "pill-ask" }
+    ];
+
+    /* APP STATE */
+    let currentScreen = 1;
+    let traces = JSON.parse(JSON.stringify(RAW_TRACES));
+    let customTags = [];
+    let currentS1Slide = 8;
+    let activeModalSlide = 2;
+    let activePeekSlide = 2;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      logUserAction("KHỞI TẠO", "Người dùng bắt đầu phiên kiểm thử tại Màn 1 (Common Context)", "Màn 1");
+      renderS1Slide(currentS1Slide);
+      renderCardsScreen2();
+      updateLiveSummary();
+    });
+
+    /* SCREEN 1 SLIDE VIEWER INTERACTIVITY */
+    function renderS1Slide(slideNum) {
+      currentS1Slide = slideNum;
+      const slide = ALL_SLIDES[slideNum] || ALL_SLIDES[8];
+      document.getElementById('s1SlideNum').innerText = `Slide ${slideNum} / 8`;
+      document.getElementById('s1Counter').innerText = `Slide ${slideNum} / 8 (Nhấp để mở to)`;
+
+      document.getElementById('s1SlideBody').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <div>
+            <span style="font-size:11px; text-transform:uppercase; font-weight:800; color:var(--primary);">Bài giảng · Slide ${slideNum}</span>
+            <h2 style="font-size:18px; font-weight:800; color:#1a1a1a; margin-top:2px;">${slide.title}</h2>
+            <div style="font-size:12.5px; color:#666;">${slide.subtitle}</div>
+          </div>
+          <span style="background:var(--primary-light); color:var(--primary); font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">
+            🔍 Xem to
+          </span>
+        </div>
+        <div style="margin-top:10px;">
+          ${slide.contentHtml}
+        </div>
+      `;
+    }
+
+    function stepS1Slide(delta) {
+      let next = currentS1Slide + delta;
+      if (next < 1) next = 8;
+      if (next > 8) next = 1;
+      logUserAction("LẬT SLIDE (MÀN 1)", `Chuyển sang Slide ${next}: ${ALL_SLIDES[next].title}`, "Màn 1");
+      renderS1Slide(next);
+    }
+
+    /* SCREEN NAVIGATION */
+    function gotoScreen(screenIndex) {
+      const prevScreen = currentScreen;
+      currentScreen = screenIndex;
+
+      document.getElementById('screen1').classList.toggle('active', screenIndex === 1);
+      document.getElementById('screen2').classList.toggle('active', screenIndex === 2);
+      document.getElementById('screen3').classList.toggle('active', screenIndex === 3);
+
+      document.getElementById('tab1').classList.toggle('active', screenIndex === 1);
+      document.getElementById('tab2').classList.toggle('active', screenIndex === 2);
+      document.getElementById('tab3').classList.toggle('active', screenIndex === 3);
+
+      const screenNames = { 1: "Common Context", 2: "Critical Interaction (Gắn tag)", 3: "Result / Decision (Sổ tay)" };
+      logUserAction("CHUYỂN MÀN HÌNH", `Từ Màn ${prevScreen} ➔ Màn ${screenIndex} (${screenNames[screenIndex]})`, `Màn ${screenIndex}`);
+
+      if (screenIndex === 2) {
+        renderCardsScreen2();
+        updateLiveSummary();
+      } else if (screenIndex === 3) {
+        renderResultScreen3();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* SLIDE VIEWER MODAL CONTROLS */
+    function openSlideModal(slideNumber = 2, attachedItemId = null, sourceOrigin = 'Màn 2') {
+      activeModalSlide = slideNumber;
+      activePeekSlide = slideNumber;
+
+      const slide = ALL_SLIDES[slideNumber] || ALL_SLIDES[2];
+      logUserAction("MỞ XEM SLIDE", `Mở Trình xem Slide ${slideNumber}: ${slide.title}${attachedItemId ? ' (Gắn với Mảnh #' + attachedItemId + ')' : ''}`, sourceOrigin);
+
+      const modal = document.getElementById('slideModalBackdrop');
+      modal.classList.add('is-open');
+
+      renderModalSlide(slideNumber, attachedItemId);
+      showToast(`Đang hiển thị Slide ${slideNumber}`);
+    }
+
+    function closeSlideModal() {
+      logUserAction("ĐÓNG SLIDE", `Đóng Trình xem Slide ${activeModalSlide}`, `Slide ${activeModalSlide}`);
+      const modal = document.getElementById('slideModalBackdrop');
+      modal.classList.remove('is-open');
+    }
+
+    function handleBackdropClick(event) {
+      if (event.target.id === 'slideModalBackdrop') {
+        closeSlideModal();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const slideModal = document.getElementById('slideModalBackdrop');
+        if (slideModal && slideModal.classList.contains('is-open')) closeSlideModal();
+
+        const logModal = document.getElementById('logModalBackdrop');
+        if (logModal && logModal.classList.contains('is-open')) closeLogModal();
+      }
+    });
+
+    function switchModalSlide(slideNum) {
+      activeModalSlide = slideNum;
+      activePeekSlide = slideNum;
+      const slide = ALL_SLIDES[slideNum] || ALL_SLIDES[2];
+      logUserAction("CHUYỂN SLIDE (MODAL)", `Xem Slide ${slideNum}: ${slide.title}`, `Slide ${slideNum}`);
+      renderModalSlide(slideNum);
+    }
+
+    function modalStepSlide(delta) {
+      let next = activeModalSlide + delta;
+      if (next < 1) next = 8;
+      if (next > 8) next = 1;
+      switchModalSlide(next);
+    }
+
+    function renderModalSlide(slideNum, attachedItemId = null) {
+      const slide = ALL_SLIDES[slideNum] || ALL_SLIDES[2];
+      
+      for (let i = 1; i <= 8; i++) {
+        const tab = document.getElementById(`tabSlide${i}`);
+        if (tab) tab.classList.toggle('active', i === slideNum);
+      }
+
+      document.getElementById('modalSlideIndicator').innerText = `Slide ${slideNum} / 8`;
+
+      const canvas = document.getElementById('modalSlideCanvas');
+      canvas.className = 'slide-canvas-card' + (slide.isBlurred ? ' is-blurred-art' : '');
+      
+      canvas.innerHTML = `
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:1px solid #f0eee8; padding-bottom:10px;">
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; font-weight:800; color:var(--primary); letter-spacing:0.5px;">
+                Slide ${slideNum} / 8 · AI Foundation
+              </span>
+              <h2 style="font-size:22px; font-weight:800; color:#1a1a1a; margin-top:3px;">
+                ${slide.title}
+              </h2>
+              <div style="font-size:13px; color:#666;">
+                ${slide.subtitle}
+              </div>
+            </div>
+            ${slide.isBlurred ? `
+              <span style="background:#fff3d6; color:#8c5300; border:1px solid #ffd175; font-size:11px; font-weight:700; padding:3px 8px; border-radius:12px;">
+                ⚠️ Sơ đồ mờ
+              </span>
+            ` : ''}
+          </div>
+
+          <div style="padding:10px 0;">
+            ${slide.contentHtml}
+          </div>
+        </div>
+
+        <div style="font-size:11px; color:#999; border-top:1px solid #f5f2eb; padding-top:10px; margin-top:14px; display:flex; justify-content:space-between;">
+          <span>Khóa học: AI Foundation — Large Language Models</span>
+          <span>Trạng thái: Đã học xong (8/8)</span>
+        </div>
+      `;
+
+      const traceBox = document.getElementById('modalTraceBox');
+      const traceText = document.getElementById('modalTraceText');
+      const matchedTrace = attachedItemId 
+        ? traces.find(t => t.id === attachedItemId)
+        : traces.find(t => t.sourceSlide === slideNum && !t.isExcluded);
+
+      if (matchedTrace) {
+        traceBox.style.display = 'flex';
+        traceText.innerHTML = `<strong>${matchedTrace.sourceMeta}</strong>: ${matchedTrace.content}`;
+      } else {
+        traceBox.style.display = 'none';
+      }
+    }
+
+    /* SCREEN 2: RENDER & TAGGING */
+    function renderCardsScreen2() {
+      const container = document.getElementById('tracesCardsContainer');
+      const allTags = [...PRESET_TAGS, ...customTags];
+
+      container.innerHTML = traces.map((item, idx) => {
+        if (item.isExcluded) {
+          return `
+            <div class="excluded-msg-bar" id="card-${item.id}">
+              <span>✕ Đã bỏ mảnh #${idx+1} (${item.sourceMeta}) khỏi ghi chú</span>
+              <button class="btn-revert-exclude" onclick="undoExclude(${item.id})">Hoàn tác</button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="interactive-card ${item.isUncertain ? 'has-uncertainty' : ''}" id="card-${item.id}">
+            <div class="card-top-bar">
+              <span class="card-source-badge">
+                <span>📌</span> #${idx+1} · ${item.sourceMeta} · ${item.sourceType}
+              </span>
+              <div class="card-tools">
+                <button class="btn-peek-slide" onclick="openSlideModal(${item.sourceSlide}, ${item.id}, 'Màn 2 Card #${idx+1}')">
+                  <span>👁️ Xem slide ${item.sourceSlide}</span>
+                  <span style="font-size:10px;">↗</span>
+                </button>
+                <button class="btn-drop-item" title="Bỏ khỏi ghi chú" onclick="excludeItem(${item.id})">
+                  ✕ Bỏ qua
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body-text ${item.sourceType === 'Highlight' ? 'is-highlight' : ''}">
+              ${item.content}
+            </div>
+
+            ${item.isUncertain ? `
+              <div class="uncertainty-callout">
+                <span style="font-size:14px;">⚠️</span>
+                <div>
+                  <strong>Nội dung gốc chưa rõ:</strong> Sơ đồ RAG bị mờ ở bước retrieval.
+                  <div style="font-size:11px; margin-top:2px; opacity:0.9;">
+                    Bấm <em>[👁️ Xem slide 7]</em> để kiểm tra hoặc tự gắn tag xử lý (ví dụ: [Chưa hiểu] hoặc [Hỏi GV]).
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- PASTEL CUTE TAGS PALETTE -->
+            <div class="tag-palette-group">
+              <span class="tag-prompt-label">Gắn tag:</span>
+              ${allTags.map(tag => {
+                const isActive = item.tags.includes(tag.id);
+                return `
+                  <span class="cute-tag-pill ${tag.pillClass} ${isActive ? 'is-active' : ''}"
+                        onclick="toggleTag(${item.id}, '${tag.id}')"
+                        title="${isActive ? 'Nhấp để bỏ chọn tag' : 'Nhấp để chọn tag này'}">
+                    <span>${tag.emoji}</span>
+                    <span>${tag.label}</span>
+                    ${isActive ? '<span style="font-size:11px; margin-left:2px;">✓</span>' : ''}
+                  </span>
+                `;
+              }).join('')}
+
+              <button class="btn-add-tag-light" onclick="createCustomTag(${item.id})">
+                + Thêm tag
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleTag(itemId, tagId) {
+      const item = traces.find(t => t.id === itemId);
+      if (!item) return;
+
+      const allTags = [...PRESET_TAGS, ...customTags];
+      const tagObj = allTags.find(t => t.id === tagId);
+      const tagLabel = tagObj ? `${tagObj.emoji} ${tagObj.label}` : tagId;
+
+      const idx = item.tags.indexOf(tagId);
+      if (idx > -1) {
+        item.tags.splice(idx, 1);
+        logUserAction("BỎ TAG", `Bỏ chọn tag [${tagLabel}] ở Mảnh #${item.id} (${item.sourceMeta})`, "Màn 2");
+        showToast("Đã bỏ chọn tag");
+      } else {
+        item.tags.push(tagId);
+        logUserAction("GẮN TAG", `Gắn tag [${tagLabel}] vào Mảnh #${item.id} (${item.sourceMeta})`, "Màn 2");
+        showToast("Đã chọn tag ✨");
+      }
+
+      renderCardsScreen2();
+      updateLiveSummary();
+    }
+
+    function updateLiveSummary() {
+      const activeTraces = traces.filter(t => !t.isExcluded);
+      const processedCount = traces.filter(t => t.isExcluded || t.tags.length > 0).length;
+
+      document.getElementById('liveProgressCount').innerText = `${processedCount} / 6 mục`;
+      const pct = Math.round((processedCount / 6) * 100);
+      document.getElementById('liveProgressBar').style.width = `${pct}%`;
+
+      const untouched = traces.filter(t => !t.isExcluded && t.tags.length === 0).length;
+      const hint = document.getElementById('untaggedHint');
+      if (untouched > 0) {
+        hint.innerText = `${untouched} nội dung chưa được phân loại.`;
+      } else {
+        hint.innerText = `✓ Đã phân loại đầy đủ 6/6 mục!`;
+      }
+
+      const allTags = [...PRESET_TAGS, ...customTags];
+      const counts = {};
+      allTags.forEach(t => counts[t.id] = 0);
+
+      activeTraces.forEach(item => {
+        item.tags.forEach(tid => {
+          if (counts[tid] !== undefined) counts[tid]++;
+        });
+      });
+
+      document.getElementById('statExam').innerText = counts['exam'] || 0;
+      document.getElementById('statUnclear').innerText = counts['unclear'] || 0;
+      document.getElementById('statImportant').innerText = counts['important'] || 0;
+      document.getElementById('statAsk').innerText = counts['ask'] || 0;
+
+      const customContainer = document.getElementById('customTagStats');
+      if (customTags.length === 0) {
+        customContainer.innerHTML = '';
+      } else {
+        customContainer.innerHTML = customTags.map(ct => `
+          <div class="tag-stat-row pill-custom" style="margin-top:6px;">
+            <span>🏷️ ${ct.label}</span>
+            <span>${counts[ct.id] || 0}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    function createCustomTag(itemId) {
+      const val = window.prompt("Nhập tên tag mới (vd: Cần hỏi mentor, Nhớ định dạng):");
+      if (!val || val.trim() === "") return;
+
+      const clean = val.trim();
+      const newId = "custom_" + Date.now();
+      const newTag = {
+        id: newId,
+        label: clean,
+        emoji: "🏷️",
+        pillClass: "pill-custom"
+      };
+
+      customTags.push(newTag);
+
+      const item = traces.find(t => t.id === itemId);
+      if (item) {
+        item.tags.push(newId);
+      }
+
+      logUserAction("TẠO TAG MỚI", `Tạo tag tùy chỉnh [🏷️ ${clean}] và gán vào Mảnh #${item.id}`, "Màn 2");
+      showToast(`Đã thêm tag "${clean}"`);
+      renderCardsScreen2();
+      updateLiveSummary();
+    }
+
+    function excludeItem(itemId) {
+      const item = traces.find(t => t.id === itemId);
+      if (!item) return;
+      item.isExcluded = true;
+      logUserAction("BỎ MỤC", `Bỏ Mảnh #${item.id} (${item.sourceMeta}) khỏi ghi chú ôn thi`, "Màn 2");
+      showToast("Đã bỏ khỏi ghi chú ôn thi");
+      renderCardsScreen2();
+      updateLiveSummary();
+    }
+
+    function undoExclude(itemId) {
+      const item = traces.find(t => t.id === itemId);
+      if (!item) return;
+      item.isExcluded = false;
+      logUserAction("HOÀN TÁC MỤC", `Khôi phục Mảnh #${item.id} (${item.sourceMeta}) vào ghi chú ôn thi`, "Màn 2");
+      showToast("Đã khôi phục mục vào ghi chú");
+      renderCardsScreen2();
+      updateLiveSummary();
+    }
+
+    /* SCREEN 3: RENDER RESULT */
+    function renderResultScreen3() {
+      const container = document.getElementById('resultClustersList');
+      const allTags = [...PRESET_TAGS, ...customTags];
+      const activeTraces = traces.filter(t => !t.isExcluded);
+
+      const tagGroups = [];
+      allTags.forEach(tag => {
+        const matched = activeTraces.filter(item => item.tags.includes(tag.id));
+        if (matched.length > 0) {
+          tagGroups.push({ tag, items: matched });
+        }
+      });
+
+      const untagged = activeTraces.filter(item => item.tags.length === 0);
+
+      if (tagGroups.length === 0 && untagged.length === 0) {
+        container.innerHTML = `
+          <div style="background:#fff; border-radius:16px; border:1px solid #ddd; padding:32px; text-align:center; color:#888;">
+            Tất cả các nội dung đã bị bỏ khỏi ghi chú.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+
+      tagGroups.forEach(group => {
+        html += `
+          <div class="result-cluster-card">
+            <div class="cluster-banner ${group.tag.pillClass}">
+              <span>${group.tag.emoji} ${group.tag.label.toUpperCase()}</span>
+              <span style="font-size:12px; opacity:0.85;">${group.items.length} nội dung</span>
+            </div>
+            <div class="cluster-items-list">
+              ${group.items.map(item => `
+                <div class="cluster-single-item">
+                  <div class="item-source-anchor">
+                    <span>${item.sourceMeta}</span> · 
+                    <span class="btn-anchor-link" onclick="openSlideModal(${item.sourceSlide}, ${item.id}, 'Màn 3 Result')">
+                      👁️ Xem slide gốc ↗
+                    </span>
+                  </div>
+                  <div class="item-text-render">${item.content}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      if (untagged.length > 0) {
+        html += `
+          <div class="result-cluster-card" style="border-style:dashed;">
+            <div class="cluster-banner" style="background:#f4f2ed; color:#666;">
+              <span>📋 CHƯA PHÂN LOẠI</span>
+              <span style="font-size:12px;">${untagged.length} nội dung</span>
+            </div>
+            <div class="cluster-items-list">
+              ${untagged.map(item => `
+                <div class="cluster-single-item">
+                  <div class="item-source-anchor">
+                    <span>${item.sourceMeta}</span> · 
+                    <span class="btn-anchor-link" onclick="openSlideModal(${item.sourceSlide}, ${item.id}, 'Màn 3 Result')">
+                      👁️ Xem slide gốc ↗
+                    </span>
+                  </div>
+                  <div class="item-text-render" style="color:#555;">${item.content}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function confirmSaveNotes() {
+      logUserAction("LƯU GHI CHÚ", "Bấm Lưu ghi chú ôn thi vào Sổ tay cá nhân", "Màn 3");
+      showToast("✅ Đã lưu ghi chú ôn thi vào Sổ tay cá nhân!");
+    }
+
+    function triggerReset() {
+      logUserAction("RESET PROTOTYPE", "Khôi phục prototype về trạng thái ban đầu", "Toàn cục");
+      traces = JSON.parse(JSON.stringify(RAW_TRACES));
+      customTags = [];
+      closeSlideModal();
+      gotoScreen(1);
+      renderS1Slide(8);
+      showToast("Đã khôi phục trạng thái ban đầu.");
+    }
+
+    let toastTimer = null;
+    function showToast(text) {
+      const toast = document.getElementById('appToast');
+      document.getElementById('toastMsg').innerText = text;
+      toast.style.display = 'flex';
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2200);
+    }
+  </script>
+</body>
+</html>

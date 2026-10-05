@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Notes · Option B</title>
+<!--
+  OPTION B — AI hỏi, user trả lời (co-create)
+  We expect the tester to: bấm "Bắt đầu Review session", đọc từng câu hỏi AI đặt ra kèm nguồn (mảnh + slide),
+                           tự gõ câu trả lời, xem bullet hiện ngay, rồi "Tạo ghi chú" → tự tag, sửa, lưu.
+  Watch for: có bấm chip nguồn để mở slide/mảnh gốc không; câu 1 AI gộp 2 mảnh (slide 5 "training khác inference" +
+             "fine-tuning vs. prompt") thành một vấn đề → tester có tách ra, sửa lại hay chấp nhận; câu 3 (slide 8 mờ,
+             có cảnh báo vàng) → trả lời, bỏ qua hay đi xem slide; có dùng "Bỏ qua" / "Câu trước" / "Huỷ phiên" không;
+             có sửa bullet ở màn kết quả không; có gắn tag không; thời gian từ câu 1 tới lúc lưu; có than phải gõ nhiều không.
+  Do not explain: chip nguồn bấm được; vì sao AI không tự trả lời; mục bỏ qua sẽ để trống; câu 1 gộp 2 mảnh.
+
+  Shared spec v2 — bài "AI Foundation" (KHÔNG sửa khi build): Screen 1 context, 6 mảnh fixture, visual style, task — giống A/C.
+  Chỉ khác: Screen 2 (critical interaction) + nội dung Screen 3.
+  Canned output — không gọi model/API. Mở file bằng trình duyệt (Chrome/Edge), thêm #facilitator vào cuối đường dẫn để hiện log hành vi (tester không thấy).
+-->
+<style>
+/* Layout: 3 cột kiểu trình xem bài giảng — sidebar mục lục 220px · khung slide · panel trợ giảng AI 340px */
+:root{
+  --bg:#f4f2ed; --card:#ffffff; --ink:#1f2422; --muted:#6b706c; --line:#e3dfd6;
+  --ai:#2f6f6a; --ai-bubble:#eef4f3; --ai-ink:#ffffff;
+  --warn-bg:#fbf3e6; --warn-line:#ecd9b5; --warn-ink:#7a5a1e;
+  --src:#9a6b2f; --cta:#1f4f8f; --cta-ink:#ffffff; --hl:#fff1b8; --danger:#a33a2a;
+  --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --radius:16px; --shadow:0 1px 2px rgba(40,36,28,.06),0 4px 14px rgba(40,36,28,.06);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--font)}
+button,select,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .back{border:0;background:none;font-size:18px;padding:4px 8px;border-radius:8px}
+.top .back:hover{background:var(--bg)}
+.top h1{font-size:16px;margin:0;font-weight:600;flex:1;min-width:200px;text-wrap:balance}
+.prog{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.bar{width:120px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--ai)}
+.avatar{width:34px;height:34px;border-radius:50%;background:#dfe8f3;color:var(--cta);display:grid;place-items:center;font-weight:700;font-size:13px}
+.reset{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 12px;font-size:13px}
+.reset:hover{background:var(--bg)}
+
+.app{display:grid;grid-template-columns:220px minmax(0,1fr) 340px;gap:18px;padding:18px 20px;min-height:calc(100% - 58px)}
+@media (max-width:1080px){.app{grid-template-columns:minmax(0,1fr) 340px}.side{display:none}}
+@media (max-width:760px){.app{grid-template-columns:minmax(0,1fr);padding:14px 16px}}
+
+/* sidebar */
+.side{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 0;align-self:start}
+.side h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 16px 10px;color:var(--muted)}
+.side .lesson{margin:0 16px 4px;font-weight:600}
+.done{display:inline-flex;align-items:center;gap:4px;margin:0 16px 12px;font-size:12px;color:var(--ai);background:var(--ai-bubble);padding:2px 8px;border-radius:999px}
+.side h3{font-size:13px;margin:8px 16px 6px}
+.slist{list-style:none;margin:0;padding:0}
+.slist button{display:flex;gap:8px;width:100%;text-align:left;border:0;background:none;padding:7px 16px;font-size:13px;border-left:3px solid transparent}
+.slist button:hover{background:var(--bg)}
+.slist button[aria-current="true"]{background:var(--ai-bubble);border-left-color:var(--ai);font-weight:600}
+.slist .n{color:var(--muted);font-variant-numeric:tabular-nums;width:16px;flex:none}
+.slist .ck{margin-left:auto;color:var(--ai);font-size:12px}
+
+/* center */
+.center{display:flex;flex-direction:column;gap:14px;min-width:0}
+.intro{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 20px;display:grid;gap:8px}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--src);font-weight:600}
+.intro h2{margin:0;font-size:19px;text-wrap:balance}
+.intro p{margin:0;color:var(--muted);max-width:68ch}
+.task{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+.task b{flex:none;background:var(--cta);color:var(--cta-ink);border-radius:6px;padding:1px 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.exam{justify-self:start;font-size:12px;background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:999px;padding:2px 10px}
+
+.viewer{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.marker{display:flex;gap:10px;align-items:flex-start;padding:10px 16px;background:var(--hl);border-bottom:1px solid var(--line);font-size:13px}
+.marker .src{margin-top:2px}
+.slide{aspect-ratio:16/9;max-width:100%;padding:clamp(16px,4vw,40px);display:flex;flex-direction:column;gap:12px;background:#fbfaf7;border-bottom:1px solid var(--line)}
+.slide .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.slide h3{margin:0;font-size:clamp(18px,2.4vw,28px);text-wrap:balance}
+.slide ul{margin:0;padding-left:20px;display:grid;gap:6px;font-size:clamp(13px,1.3vw,16px)}
+.slide mark{background:var(--hl);padding:0 3px;border-radius:3px}
+.slide.blur .body{filter:blur(3.5px);user-select:none}
+.vnav{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 14px;font-size:13px;color:var(--muted)}
+.vnav button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:4px 10px}
+.vnav button:disabled{opacity:.4;cursor:default}
+.pg{font-variant-numeric:tabular-nums}
+
+/* panel */
+.panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;align-self:start;position:sticky;top:18px;max-height:calc(100vh - 36px);min-width:0}
+.ph{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.ai-av{width:30px;height:30px;border-radius:50%;background:var(--ai);color:var(--ai-ink);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.ph b{font-size:14px}
+.ph span{font-size:12px;color:var(--muted);margin-left:auto}
+.pb{padding:14px 16px;overflow:auto;display:grid;gap:12px;align-content:start}
+.pf{padding:12px 16px;border-top:1px solid var(--line);display:grid;gap:8px}
+
+.bubble{background:var(--ai-bubble);border-radius:14px;padding:10px 12px;font-size:13px;display:grid;gap:6px}
+.bubble p{margin:0}
+.bubble .lim{color:var(--muted);font-size:12px}
+.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);border-radius:12px;padding:8px 10px;font-size:12.5px}
+.src{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--src);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--warn-line);background:var(--card);color:var(--src);border-radius:999px;padding:2px 9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+.chip:hover{background:var(--warn-bg)}
+
+.frag{display:grid;gap:3px;text-align:left;width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 11px}
+.frag:hover{border-color:var(--ai)}
+.frag .t{font-size:13px}
+.frag .thumbs{display:flex;gap:4px;flex-wrap:wrap}
+.frag .thumbs i{font-style:normal;font-size:10.5px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-family:ui-monospace,Consolas,monospace}
+
+.steps{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.steps i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.steps i.on{background:var(--ai)}
+.steps i.skip{background:var(--warn-line)}
+.q{font-size:14px;font-weight:600;margin:0}
+textarea{width:100%;min-height:96px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+textarea:focus{border-color:var(--ai);outline:none;box-shadow:0 0 0 3px var(--ai-bubble)}
+.pre{border:1px dashed var(--line);border-radius:12px;padding:8px 12px;font-size:13px}
+.pre .lbl{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.pre ul{margin:4px 0 0;padding-left:18px}
+.pre .empty{color:var(--muted);font-style:italic}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 12px;font-size:13px}
+.btn:hover{background:var(--bg)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.pri{background:var(--cta);border-color:var(--cta);color:var(--cta-ink);font-weight:600}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.grow{flex:1}
+.link{border:0;background:none;color:var(--muted);font-size:12.5px;text-decoration:underline;padding:2px 0;justify-self:start}
+.link:hover{color:var(--danger)}
+
+/* result */
+.notes{display:grid;gap:12px}
+.note{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;display:grid;gap:8px;min-width:0}
+.note.off{opacity:.55}
+.note h4{margin:0;font-size:15px}
+.note .who{font-size:12px;color:var(--muted)}
+.note textarea{min-height:70px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tags .lbl{font-size:12px;color:var(--muted)}
+.tag{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:2px 10px;font-size:12px}
+.tag[aria-pressed="true"]{background:var(--ai);border-color:var(--ai);color:var(--ai-ink)}
+.saved{background:var(--ai-bubble);border-radius:14px;padding:12px;font-size:13px;display:grid;gap:4px}
+
+/* facilitator log */
+.flog{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100% - 24px));max-height:40vh;background:#1f2422;color:#e9ede9;border-radius:12px;padding:10px;font:12px/1.45 ui-monospace,Consolas,monospace;display:grid;gap:6px;z-index:9;box-shadow:var(--shadow)}
+.flog .h{display:flex;justify-content:space-between;align-items:center;font-family:var(--font)}
+.flog button{border:1px solid #4a514d;background:transparent;color:inherit;border-radius:6px;padding:2px 8px;font-size:11px}
+.flog pre{margin:0;overflow:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <button class="back" id="topBack" aria-label="Về bài học">←</button>
+  <h1>Ngày 2 · Day 18 · AI Notes — Notes để ôn thi</h1>
+  <div class="prog"><span class="pg">8/8 slide</span><span class="bar"><i></i></span></div>
+  <button class="reset" id="topReset">↺ Bắt đầu lại</button>
+  <span class="avatar" aria-hidden="true">HV</span>
+</header>
+
+<div class="app">
+  <aside class="side" aria-label="Nội dung bài học">
+    <h2>Nội dung bài học</h2>
+    <div class="lesson">AI Foundation — LLM hoạt động thế nào</div>
+    <span class="done">✓ Đã học xong</span>
+    <h3>Bài giảng · Danh sách slide</h3>
+    <ul class="slist" id="slist"></ul>
+  </aside>
+
+  <main class="center" id="center"></main>
+
+  <aside class="panel" id="panel" aria-label="Trợ giảng AI"></aside>
+</div>
+
+<div class="flog" id="flog" hidden>
+  <div class="h"><b>Log hành vi · Option B</b><span><button id="logCopy">Sao chép</button> <button id="logClear">Xoá</button></span></div>
+  <pre id="logOut"></pre>
+</div>
+
+<script>
+// ---------- Shared fixture (GIỐNG A/B/C) ----------
+const SLIDES = [
+  {k:"Slide 1",t:"AI, Machine Learning, Deep Learning",b:["AI: máy làm việc cần trí thông minh của người","ML: máy học quy luật từ dữ liệu thay vì viết luật tay","Deep Learning: ML dùng mạng nơ-ron nhiều lớp","Ba khái niệm lồng nhau: DL ⊂ ML ⊂ AI"]},
+  {k:"Slide 2",t:"Ba cách máy học",b:["Có giám sát: học từ dữ liệu đã gắn nhãn đúng/sai","Không giám sát: tự tìm nhóm trong dữ liệu chưa gắn nhãn","Học tăng cường: thử – nhận thưởng/phạt – chỉnh lại"]},
+  {k:"Slide 3",t:"LLM là gì",b:["LLM = Large Language Model, học từ lượng văn bản rất lớn",'<mark>LLMs predict the next token based on context</mark>',"Câu trả lời dài = đoán lần lượt từng token","Không tra cứu sự thật, chỉ đoán chuỗi chữ hợp lý nhất"]},
+  {k:"Slide 4",t:"Token và context window",b:["Token là mảnh chữ: có thể là 1 từ, một phần từ hoặc dấu câu","Tiếng Việt thường tốn nhiều token hơn tiếng Anh","Context window: số token tối đa model “nhìn thấy” một lần","Vượt context window → phần đầu bị quên"]},
+  {k:"Slide 5",t:"Training, fine-tuning và inference",b:["Training: model học từ dữ liệu, thay đổi trọng số","Fine-tuning: train thêm trên dữ liệu riêng cho một việc cụ thể","Inference: dùng model đã train để trả lời, trọng số không đổi","Mỗi lần chat là inference, không phải training"]},
+  {k:"Slide 6",t:"Prompt",b:["Prompt là toàn bộ chỉ dẫn và ngữ cảnh gửi cho model","Prompt tốt: nêu vai trò, nhiệm vụ, ví dụ, định dạng đầu ra","Đổi prompt chỉ đổi đầu vào, không đổi model","Prompt khác nhau → câu trả lời khác nhau dù cùng model"]},
+  {k:"Slide 7",t:"Temperature",b:["Temperature điều chỉnh độ ngẫu nhiên khi chọn token","Thấp (≈0): chọn token chắc nhất, câu trả lời ổn định","Cao: chọn cả token ít chắc hơn, sáng tạo hơn nhưng dễ lạc ý","Việc cần chính xác → để temperature thấp"]},
+  {k:"Slide 8",t:"Hallucination và cách kiểm chứng",blur:true,b:["Hallucination: model trả lời trôi chảy nhưng sai sự thật","Nguyên nhân: model đoán chữ hợp lý, không kiểm tra sự thật","Cách giảm: đưa nguồn vào prompt, yêu cầu trích dẫn","Luôn kiểm lại số liệu, tên riêng, trích dẫn"]}
+];
+const FRAGS = [
+  {id:1,type:"Screenshot",text:"4 ảnh chụp màn hình slide 5–8",files:["IMG_0243.png","IMG_0244.png","IMG_0245.png","IMG_0246.png"],src:"Folder “Ảnh thi” · slide 5–8",slide:5},
+  {id:2,type:"Note nhanh lúc học",text:"chưa hiểu slide 5: training khác inference chỗ nào",src:"Slide 5 · 04:12",slide:5},
+  {id:3,type:"Câu hỏi của bạn",text:"cần nail phần fine-tuning vs. prompt cho thi",src:"Tự gõ · không gắn slide",slide:null},
+  {id:4,type:"Highlight",text:"LLMs predict the next token based on context",src:"Slide 3",slide:3},
+  {id:5,type:"Câu hỏi",text:"thắc mắc: token có phải là 1 từ không?",src:"Slide 3 · 01:24",slide:3},
+  {id:6,type:"Không chắc",text:"slide 8: ảnh mờ, đọc không rõ",src:"Slide 8",slide:8}
+];
+
+// ---------- Option B: canned AI questions (chỉ hỏi, không trả lời) ----------
+const QS = [
+  {title:"Training, inference và fine-tuning vs. prompt",frags:[2,3],
+   q:"Ở slide 5 bạn ghi “chưa hiểu: training khác inference chỗ nào”, và bạn muốn nắm chắc fine-tuning vs. prompt cho thi. Lúc học, bạn vướng ở chỗ nào?"},
+  {title:"LLM đoán token tiếp theo",frags:[4,5],
+   q:"Bạn highlight “LLMs predict the next token based on context” và hỏi “token có phải là 1 từ không?”. Giờ bạn tự giải thích câu đó ra sao? Còn chỗ nào muốn hỏi thêm không?"},
+  {title:"Slide 8 và các ảnh chụp",frags:[6,1],uncertain:true,
+   q:"Slide 8 bạn ghi “ảnh mờ, đọc không rõ”, và bạn có 4 ảnh chụp slide 5–8. Bạn nhớ slide 8 nói về gì, và phần đó có cần cho thi không?"}
+];
+const TAGS = ["Quan trọng","Chưa hiểu","Hỏi giảng viên"];
+
+// ---------- state ----------
+let S;
+function fresh(){ return {screen:1, slide:1, marker:null, q:0, answers:["","",""], skipped:[false,false,false], notes:null, saved:false, removed:null}; }
+S = fresh();
+
+// ---------- facilitator log ----------
+const FAC = location.hash === "#facilitator";
+addEventListener("hashchange", () => location.reload()); // thêm/bỏ #facilitator trên thanh địa chỉ → tải lại để bật/tắt log
+const t0 = Date.now(); const LOG = [];
+function log(msg){ if(!FAC) return; const s=Math.round((Date.now()-t0)/1000); LOG.push(`[B +${s}s] ${msg}`); document.getElementById("logOut").textContent = LOG.join("\n"); }
+if(FAC){ const f=document.getElementById("flog"); f.hidden=false;
+  document.getElementById("logCopy").onclick=()=>{ const txt=LOG.join("\n"); navigator.clipboard?.writeText(txt).catch(()=>{ const r=document.createRange(); r.selectNodeContents(document.getElementById("logOut")); getSelection().removeAllRanges(); getSelection().addRange(r); }); };
+  document.getElementById("logClear").onclick=()=>{ LOG.length=0; document.getElementById("logOut").textContent=""; };
+}
+
+// ---------- helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const frag = id => FRAGS.find(f => f.id === id);
+function bullets(text){
+  return text.split(/\n+/).flatMap(l => l.split(/(?<=[.!?])\s+/)).map(s => s.trim().replace(/^[-•*]\s*/,"")).filter(Boolean);
+}
+function showSlide(n, markerFragId){ if(n) S.slide = n; // mảnh không gắn slide → giữ slide đang xem
+  S.marker = markerFragId ?? null; renderSide(); renderCenter(); }
+
+// ---------- sidebar ----------
+function renderSide(){
+  document.getElementById("slist").innerHTML = SLIDES.map((s,i)=>
+    `<li><button data-s="${i+1}" aria-current="${S.screen!==3 && S.slide===i+1}"><span class="n">${i+1}</span><span>${esc(s.t)}</span><span class="ck">✓</span></button></li>`).join("");
+  document.querySelectorAll("#slist button").forEach(b => b.onclick = () => {
+    if(S.screen===3) return; // màn kết quả: giữ nguyên ghi chú đang sửa
+    showSlide(+b.dataset.s); log(`mở slide ${b.dataset.s} từ mục lục`);
+  });
+}
+
+// ---------- center ----------
+function introHTML(){
+  return `<section class="intro">
+    <span class="eyebrow">AI Foundation · 8 slide · đã học xong</span>
+    <h2>Ngày 2 · Day 18 · AI Notes — Notes để ôn thi</h2>
+    <p>Sau khi học xong, hệ thống giúp bạn biến các dấu vết bạn để lại trong bài thành ghi chú ôn thi.</p>
+    <div class="task"><b>Đề bài</b><span>Tình huống: bạn vừa học xong bài này, 4 ngày nữa thi. Dùng từng phương án để tạo ghi chú ôn thi từ những gì bạn đã lưu.</span></div>
+    <span class="exam">Kỳ thi cách 4 ngày</span>
+  </section>`;
+}
+function viewerHTML(){
+  const s = SLIDES[S.slide-1]; const f = S.marker ? frag(S.marker) : null;
+  return `<section class="viewer" aria-label="Trình xem slide">
+    ${f ? `<div class="marker"><span class="src">Mảnh ${f.id} · ${esc(f.type)} · ${esc(f.src)}</span><span>${esc(f.text)}${f.files?`<br>${f.files.map(esc).join(" · ")}`:""}${f.slide?"":"<br><i>Bạn tự gõ mảnh này, nó không gắn với slide nào.</i>"}</span></div>` : ""}
+    <div class="slide ${s.blur?"blur":""}">
+      <span class="k">${esc(s.k)} · AI Foundation</span>
+      <div class="body" style="display:grid;gap:12px"><h3>${esc(s.t)}</h3><ul>${s.b.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    </div>
+    <div class="vnav"><button id="prev" ${S.slide===1?"disabled":""} aria-label="Slide trước">‹</button><span class="pg">${S.slide} / 8</span><button id="next" ${S.slide===8?"disabled":""} aria-label="Slide sau">›</button></div>
+  </section>`;
+}
+function resultHTML(){
+  return `<section class="intro">
+      <span class="eyebrow">Ghi chú ôn thi · AI Foundation</span>
+      <h2>Ghi chú từ câu trả lời của bạn</h2>
+      <p>Mỗi mục là câu bạn đã trả lời, chia theo câu hỏi. Sửa, gắn tag hoặc bỏ mục trước khi lưu.</p>
+    </section>
+    <div class="notes">${S.notes.map((n,i)=>{
+      if(n.off) return `<article class="note off"><div class="row" style="align-items:center;justify-content:space-between"><span>Đã bỏ: <b>${esc(n.title)}</b></span><button class="btn" data-undo="${i}">Hoàn tác</button></div></article>`;
+      return `<article class="note">
+        <div class="chips">${n.frags.map(id=>{const f=frag(id);return `<span class="src">Mảnh ${id} · ${esc(f.src)}</span>`}).join('<span class="src">+</span>')}</div>
+        <h4>${esc(n.title)}</h4>
+        <textarea id="note-${i}" data-note="${i}" placeholder="Bạn chưa trả lời câu này — điền sau cũng được" ${S.saved?"readonly":""}>${esc(n.text)}</textarea>
+        <span class="who">${n.text.trim() ? "Lời của bạn" : "Để trống — AI không điền hộ"}</span>
+        <div class="tags"><span class="lbl">Tag:</span>${TAGS.map(t=>`<button class="tag" data-tag="${i}|${t}" aria-pressed="${n.tags.includes(t)}" ${S.saved?"disabled":""}>${t}</button>`).join("")}
+          ${S.saved?"":`<button class="link" data-off="${i}" style="margin-left:auto">Bỏ mục</button>`}</div>
+      </article>`;}).join("")}</div>`;
+}
+function renderCenter(){
+  const c = document.getElementById("center");
+  c.innerHTML = S.screen===3 ? resultHTML() : introHTML() + viewerHTML();
+  if(S.screen!==3){
+    document.getElementById("prev").onclick = () => { showSlide(S.slide-1); log(`slide ‹ → ${S.slide}`); };
+    document.getElementById("next").onclick = () => { showSlide(S.slide+1); log(`slide › → ${S.slide}`); };
+  } else {
+    c.querySelectorAll("textarea[data-note]").forEach(t => {
+      t.oninput = () => { S.notes[+t.dataset.note].text = t.value; S.notes[+t.dataset.note].edited = true; };
+      t.onchange = () => log(`sửa ghi chú ${+t.dataset.note+1}`);
+    });
+    c.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => {
+      const [i,t] = b.dataset.tag.split("|"); const tags = S.notes[+i].tags; const k = tags.indexOf(t);
+      k<0 ? tags.push(t) : tags.splice(k,1); log(`${k<0?"gắn":"bỏ"} tag "${t}" cho ghi chú ${+i+1}`); renderCenter(); renderPanel();
+    });
+    c.querySelectorAll("[data-off]").forEach(b => b.onclick = () => { S.notes[+b.dataset.off].off = true; log(`bỏ mục ${+b.dataset.off+1}`); renderCenter(); renderPanel(); });
+    c.querySelectorAll("[data-undo]").forEach(b => b.onclick = () => { S.notes[+b.dataset.undo].off = false; log(`hoàn tác bỏ mục ${+b.dataset.undo+1}`); renderCenter(); renderPanel(); });
+  }
+}
+
+// ---------- panel ----------
+function panelHead(sub){ return `<div class="ph"><span class="ai-av">AI</span><b>Trợ giảng AI</b><span>${sub}</span></div>`; }
+
+function panel1(){
+  return panelHead("6 mảnh đã lưu") + `<div class="pb">
+    <div class="bubble"><p>Trong bài này bạn đã lưu 6 mảnh. Bấm vào một mảnh để xem lại trên slide.</p></div>
+    ${FRAGS.map(f=>`<button class="frag" data-frag="${f.id}">
+      <span class="src">Mảnh ${f.id} · ${esc(f.type)} · ${esc(f.src)}</span>
+      <span class="t">${esc(f.text)}</span>
+      ${f.files?`<span class="thumbs">${f.files.map(x=>`<i>${esc(x)}</i>`).join("")}</span>`:""}
+    </button>`).join("")}
+  </div>
+  <div class="pf"><button class="btn pri" id="start">Bắt đầu Review session</button></div>`;
+}
+
+function panel2(){
+  const i = S.q, Q = QS[i], ans = S.answers[i], bl = bullets(ans), last = i===QS.length-1;
+  const steps = QS.map((_,k)=>`<i class="${k<=i?"on":""} ${S.skipped[k]&&k<i?"skip":""}"></i>`).join("");
+  return panelHead("Review session") + `<div class="pb">
+    ${i===0?`<div class="bubble">
+      <p>AI sẽ hỏi bạn 3 câu về các mảnh bạn đã lưu; ghi chú sinh ra từ câu trả lời của bạn, không phải suy đoán của AI.</p>
+      <p class="lim">AI chỉ hỏi, không tự trả lời. Câu nào bạn bỏ trống thì mục đó để trống cho bạn điền sau.</p>
+    </div>
+    <div class="warn">AI có thể hiểu mảnh chưa hiểu của bạn sai — câu trả lời của bạn mới quyết định.</div>`:""}
+    <div class="steps">${steps}<span style="margin-left:6px">Câu ${i+1} / ${QS.length}</span></div>
+    <div class="bubble">
+      <div class="chips">${Q.frags.map(id=>{const f=frag(id);return `<button class="chip" data-src="${id}">Mảnh ${id} · ${esc(f.src)}</button>`}).join("")}</div>
+      <p class="q">${esc(Q.q)}</p>
+    </div>
+    ${Q.uncertain?`<div class="warn">Mảnh này không rõ nội dung — bạn nhớ phần này chứ? AI không đọc được slide 8 nên không đoán hộ.</div>`:""}
+    <label class="src" for="ans">Câu trả lời của bạn</label>
+    <textarea id="ans" placeholder="Gõ theo cách bạn hiểu. Mỗi ý một dòng.">${esc(ans)}</textarea>
+    <div class="pre" id="pre">${preHTML(bl)}</div>
+  </div>
+  <div class="pf">
+    <div class="row">
+      <button class="btn" id="prevQ" ${i===0?"disabled":""}>← Câu trước</button>
+      <button class="btn" id="skip">Bỏ qua</button>
+      <button class="btn pri grow" id="nextQ">${last?"Tạo ghi chú":"Câu tiếp →"}</button>
+    </div>
+    <button class="link" id="cancel">Huỷ phiên · về các mảnh gốc</button>
+  </div>`;
+}
+function preHTML(bl){ return `<span class="lbl">Ghi chú sẽ thành</span>${bl.length?`<ul>${bl.map(b=>`<li>${esc(b)}</li>`).join("")}</ul>`:`<div class="empty">Chưa có gì — mục này sẽ để trống.</div>`}`; }
+
+function panel3(){
+  const live = S.notes.filter(n=>!n.off), empty = live.filter(n=>!n.text.trim()).length, tagged = live.filter(n=>n.tags.length).length;
+  if(S.saved) return panelHead("Đã lưu") + `<div class="pb">
+      <div class="saved"><b>Đã lưu ${live.length} ghi chú vào Sổ ghi chú</b><span>${empty?`${empty} mục để trống, bạn điền sau.`:"Không có mục trống."}</span></div>
+    </div>
+    <div class="pf"><button class="btn pri" id="again">↺ Bắt đầu lại từ bài học</button></div>`;
+  return panelHead("Kết quả") + `<div class="pb">
+      <div class="bubble"><p>Đây là câu trả lời của bạn, chia theo 3 câu hỏi. AI không thêm hay sửa ý nào.</p>
+      <p class="lim">${live.length} mục · ${empty} mục để trống · ${tagged} mục đã gắn tag</p></div>
+      ${empty?`<div class="warn">${empty} mục chưa có nội dung. Bạn có thể điền ngay bên trái, hoặc lưu và điền sau.</div>`:""}
+    </div>
+    <div class="pf">
+      <button class="btn pri" id="save" ${live.length?"":"disabled"}>Lưu vào Sổ ghi chú</button>
+      <button class="btn" id="backQ">← Sửa câu trả lời</button>
+      <button class="link" id="cancel">Huỷ phiên · về các mảnh gốc</button>
+    </div>`;
+}
+
+function renderPanel(){
+  const p = document.getElementById("panel");
+  p.innerHTML = S.screen===1 ? panel1() : S.screen===2 ? panel2() : panel3();
+  if(S.screen===1){
+    p.querySelectorAll("[data-frag]").forEach(b => b.onclick = () => { const f=frag(+b.dataset.frag); showSlide(f.slide, f.id); log(`mở mảnh ${f.id} (${f.slide?`slide ${f.slide}`:"không gắn slide"})`); });
+    document.getElementById("start").onclick = () => { S.screen=2; S.q=0; log("bắt đầu Review session"); goQ(); };
+  }
+  if(S.screen===2){
+    const ta = document.getElementById("ans");
+    ta.oninput = () => { S.answers[S.q] = ta.value; document.getElementById("pre").innerHTML = preHTML(bullets(ta.value)); };
+    p.querySelectorAll("[data-src]").forEach(b => b.onclick = () => { const f=frag(+b.dataset.src); showSlide(f.slide, f.id); log(`câu ${S.q+1}: mở nguồn mảnh ${f.id} (${f.slide?`slide ${f.slide}`:"không gắn slide"})`); });
+    document.getElementById("prevQ").onclick = () => { log(`câu ${S.q+1}: ← câu trước`); S.q--; goQ(); };
+    document.getElementById("skip").onclick = () => { S.skipped[S.q]=true; S.answers[S.q]=""; log(`câu ${S.q+1}: bỏ qua`); advance(); };
+    document.getElementById("nextQ").onclick = () => { S.skipped[S.q]=!S.answers[S.q].trim(); log(`câu ${S.q+1}: trả lời ${S.answers[S.q].trim().length} ký tự`); advance(); };
+    document.getElementById("cancel").onclick = () => { log(`huỷ phiên ở câu ${S.q+1}`); reset(); };
+  }
+  if(S.screen===3){
+    if(S.saved){ document.getElementById("again").onclick = () => { log("bắt đầu lại sau khi lưu"); reset(); }; return; }
+    document.getElementById("save").onclick = () => { S.saved=true; const live=S.notes.filter(n=>!n.off); log(`LƯU: ${live.length} mục, ${live.filter(n=>!n.text.trim()).length} trống, ${live.filter(n=>n.edited).length} đã sửa, tag: ${live.map(n=>n.tags.join("+")||"-").join(" | ")}`); renderCenter(); renderPanel(); };
+    document.getElementById("backQ").onclick = () => { S.notes.forEach((n,i)=>{ if(!n.off) S.answers[i]=n.text; }); S.screen=2; S.q=0; log("← sửa câu trả lời từ màn kết quả"); goQ(); };
+    document.getElementById("cancel").onclick = () => { log("huỷ phiên ở màn kết quả"); reset(); };
+  }
+}
+
+function goQ(){ const f = frag(QS[S.q].frags[0]); S.slide=f.slide; S.marker=f.id; renderSide(); renderCenter(); renderPanel(); document.getElementById("ans")?.focus(); }
+function advance(){
+  if(S.q < QS.length-1){ S.q++; goQ(); return; }
+  S.notes = QS.map((Q,i)=>({title:Q.title, frags:Q.frags, text:bullets(S.answers[i]).map(b=>"• "+b).join("\n"), tags:[], off:false, edited:false}));
+  S.screen = 3; log("tạo ghi chú → màn kết quả"); renderSide(); renderCenter(); renderPanel(); window.scrollTo({top:0});
+}
+function reset(){ S = fresh(); renderSide(); renderCenter(); renderPanel(); window.scrollTo({top:0}); }
+
+document.getElementById("topReset").onclick = () => { log("↺ bắt đầu lại (thanh trên)"); reset(); };
+document.getElementById("topBack").onclick = () => { log("← về bài học (thanh trên)"); reset(); };
+reset(); log("mở prototype");
+</script>
+</body>
+</html>
